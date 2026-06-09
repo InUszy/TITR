@@ -49,7 +49,7 @@ export const zh: TranslationTree = {
     langEn: 'English',
   },
   login: {
-    title: '跨里海国际物流双向数据交换系统',
+    title: '跨里海国际物流数据交换平台',
     subtitle: '请登录以继续',
     username: '用户名',
     password: '密码',

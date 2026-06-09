@@ -47,7 +47,7 @@ export const en: TranslationTree = {
     langEn: 'English',
   },
   login: {
-    title: 'Trans-Caspian International Logistics Bidirectional Data Exchange System',
+    title: 'Trans-Caspian International Logistics Data Exchange Platform',
     subtitle: 'Please sign in to continue',
     username: 'Username',
     password: 'Password',
