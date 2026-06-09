@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CommandCorridorMap, NodeStatusDot } from '../components/CommandCorridorMap'
 import { useLanguage } from '../i18n/LanguageContext'
 import {
@@ -78,10 +79,10 @@ function RiskAlertPopup({ risk, node, onClose }: { risk: RiskAlert; node: Corrid
       {affectedTrajectories.length > 0 && (
         <div className="cmd-risk-popup-tracks">
           <h4>{t('command.impactTracking')} ({affectedTrajectories.length})</h4>
-          {affectedTrajectories.slice(0, 3).map((t) => (
-            <div key={t.id} className="cmd-track-mini">
-              <span>{t.containerNo}</span>
-              <RiskBadge level={t.riskLevel} />
+          {affectedTrajectories.slice(0, 3).map((track) => (
+            <div key={track.id} className="cmd-track-mini">
+              <span>{track.trainNo} · {track.containers.length} TEU</span>
+              <RiskBadge level={track.riskLevel} />
             </div>
           ))}
         </div>
@@ -117,6 +118,138 @@ function NodeDetailPanel({ node, onClose }: { node: CorridorNode; onClose: () =>
             </div>
           ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+const TRACK_POPOVER_GAP = 8
+
+function TrainTrackCard({
+  track,
+  locale,
+}: {
+  track: (typeof activeTrajectories)[number]
+  locale: string
+}) {
+  const { t } = useLanguage()
+  const [showContainers, setShowContainers] = useState(false)
+  const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 })
+  const anchorRef = useRef<HTMLDivElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const closeTimerRef = useRef<number | null>(null)
+  const currentNode = getNodeById(track.currentNodeId)
+  const routeLabels = track.routeNodeIds
+    .map((id) => {
+      const n = getNodeById(id)
+      return n ? nodeDisplayName(n, locale) : null
+    })
+    .filter(Boolean)
+    .join(' → ')
+
+  const updatePopoverPosition = useCallback(() => {
+    const anchor = anchorRef.current
+    if (!anchor) return
+
+    const rect = anchor.getBoundingClientRect()
+    const height = popoverRef.current?.offsetHeight ?? 168
+    const width = popoverRef.current?.offsetWidth ?? 240
+    setPopoverPos({
+      top: Math.max(8, rect.top - height - TRACK_POPOVER_GAP),
+      left: Math.min(Math.max(8, rect.left), window.innerWidth - width - 8),
+    })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!showContainers) return
+    updatePopoverPosition()
+  }, [showContainers, updatePopoverPosition, track.containers.length])
+
+  useEffect(() => {
+    if (!showContainers) return
+
+    window.addEventListener('scroll', updatePopoverPosition, true)
+    window.addEventListener('resize', updatePopoverPosition)
+
+    return () => {
+      window.removeEventListener('scroll', updatePopoverPosition, true)
+      window.removeEventListener('resize', updatePopoverPosition)
+    }
+  }, [showContainers, updatePopoverPosition])
+
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }
+
+  const openContainers = () => {
+    clearCloseTimer()
+    setShowContainers(true)
+  }
+
+  const scheduleClose = () => {
+    clearCloseTimer()
+    closeTimerRef.current = window.setTimeout(() => setShowContainers(false), 120)
+  }
+
+  return (
+    <div className="cmd-track-card">
+      <div className="cmd-track-card-header">
+        <span className="cmd-track-train">{track.trainNo}</span>
+        <RiskBadge level={track.riskLevel} />
+      </div>
+      <div
+        ref={anchorRef}
+        className="cmd-track-meta-wrap"
+        onMouseEnter={openContainers}
+        onMouseLeave={scheduleClose}
+      >
+        <button
+          type="button"
+          className="cmd-track-meta-trigger"
+          aria-expanded={showContainers}
+          onClick={(e) => {
+            e.stopPropagation()
+            if (showContainers) {
+              setShowContainers(false)
+            } else {
+              openContainers()
+            }
+          }}
+        >
+          {t('command.containerCount')} {track.containers.length}
+        </button>
+      </div>
+      <div className="cmd-track-route" title={routeLabels}>{routeLabels}</div>
+      <div className="cmd-track-progress">
+        <div className="cmd-track-progress-bar">
+          <div className="cmd-track-progress-fill" style={{ width: `${track.progress}%` }} />
+        </div>
+        <span>{t('command.currentAt', { progress: track.progress, node: currentNode ? nodeDisplayName(currentNode, locale) : '—' })}</span>
+      </div>
+
+      {showContainers && createPortal(
+        <div
+          ref={popoverRef}
+          className="cmd-track-containers-popover cmd-track-containers-popover-portal"
+          style={{ top: popoverPos.top, left: popoverPos.left }}
+          role="tooltip"
+          onMouseEnter={openContainers}
+          onMouseLeave={scheduleClose}
+        >
+          <div className="cmd-track-containers-popover-title">{t('command.containersOnTrain')}</div>
+          <ul className="cmd-track-containers-list">
+            {track.containers.map((c) => (
+              <li key={c.containerNo} className="cmd-track-container-item">
+                <span className="cmd-track-container-no">{c.containerNo}</span>
+                <span className="cmd-track-container-waybill">{c.waybillNo}</span>
+              </li>
+            ))}
+          </ul>
+        </div>,
+        document.body,
       )}
     </div>
   )
@@ -331,32 +464,9 @@ export function CommandDashboardPage() {
       <footer className="cmd-track-panel">
         <h2 className="cmd-panel-title">{t('command.trajectory')}</h2>
         <div className="cmd-track-scroll">
-          {filteredTrajectories.map((track) => {
-            const currentNode = getNodeById(track.currentNodeId)
-            const routeLabels = track.routeNodeIds
-              .map((id) => {
-                const n = getNodeById(id)
-                return n ? nodeDisplayName(n, locale) : null
-              })
-              .filter(Boolean)
-              .join(' → ')
-            return (
-              <div key={track.id} className="cmd-track-card">
-                <div className="cmd-track-card-header">
-                  <span className="cmd-track-container">{track.containerNo}</span>
-                  <RiskBadge level={track.riskLevel} />
-                </div>
-                <div className="cmd-track-waybill">{track.waybillNo}</div>
-                <div className="cmd-track-route" title={routeLabels}>{routeLabels}</div>
-                <div className="cmd-track-progress">
-                  <div className="cmd-track-progress-bar">
-                    <div className="cmd-track-progress-fill" style={{ width: `${track.progress}%` }} />
-                  </div>
-                  <span>{t('command.currentAt', { progress: track.progress, node: currentNode ? nodeDisplayName(currentNode, locale) : '—' })}</span>
-                </div>
-              </div>
-            )
-          })}
+          {filteredTrajectories.map((track) => (
+            <TrainTrackCard key={track.id} track={track} locale={locale} />
+          ))}
         </div>
       </footer>
     </div>

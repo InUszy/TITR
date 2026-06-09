@@ -37,6 +37,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(LOCALE_STORAGE_KEY, locale)
     document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en'
+    document.title = resolvePath(catalogs[locale], 'login.title') ?? resolvePath(catalogs.zh, 'login.title') ?? document.title
   }, [locale])
 
   const setLocale = useCallback((next: Locale) => {

@@ -16,21 +16,29 @@ import {
   loadStoredUser,
   storeUser,
   type AuthUser,
+  type UserRole,
 } from './types/auth'
 import './FreightTracking.css'
 
 const USER_ALLOWED_PAGES: AppPage[] = ['freight', 'files', 'profile']
 
+function getDefaultPage(role: UserRole): AppPage {
+  return role === 'admin' ? 'command' : 'freight'
+}
+
 function App() {
   const [user, setUser] = useState<AuthUser | null>(() => loadStoredUser())
-  const [activePage, setActivePage] = useState<AppPage>('freight')
+  const [activePage, setActivePage] = useState<AppPage>(() => {
+    const storedUser = loadStoredUser()
+    return storedUser ? getDefaultPage(storedUser.role) : 'freight'
+  })
   const [trackingView, setTrackingView] = useState<TrackingView>('regular')
   const pageData = trackingView === 'regular' ? mockData : archivedMockData
 
   const handleLogin = (loggedInUser: AuthUser) => {
     storeUser(loggedInUser)
     setUser(loggedInUser)
-    setActivePage('freight')
+    setActivePage(getDefaultPage(loggedInUser.role))
   }
 
   const handleLogout = () => {

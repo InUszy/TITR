@@ -1,4 +1,4 @@
-import type { FreightRecord } from '../types/freight'
+import type { TrainRecord } from '../types/freight'
 
 function escapeCsvCell(value: string) {
   if (/[",\n\r]/.test(value)) {
@@ -11,42 +11,46 @@ function locationText(location: { city: string } | null) {
   return location?.city ?? '-'
 }
 
-function buildCsvContent(records: FreightRecord[]) {
+function buildCsvContent(trains: TrainRecord[]) {
   const headers = [
+    '班列号',
     '集装箱号',
     '运单号',
     'SMGS号',
     '出发',
     '到达',
     '当前站点',
-    '状态',
+    '班列状态',
     '报关状态',
     '车厢号',
     '创建时间',
     '更新时间',
   ]
 
-  const rows = records.map((row) => [
-    row.container,
-    row.waybillNo,
-    row.smgsNo,
-    locationText(row.departure),
-    locationText(row.arrival),
-    locationText(row.currentStation),
-    row.status,
-    row.customsStatus,
-    row.carriageNo,
-    row.createdAt,
-    row.updatedAt,
-  ])
+  const rows = trains.flatMap((train) =>
+    train.containers.map((row) => [
+      train.trainNo,
+      row.container,
+      row.waybillNo,
+      row.smgsNo,
+      locationText(train.departure),
+      locationText(train.arrival),
+      locationText(train.currentStation),
+      train.status,
+      row.customsStatus,
+      train.carriageNo,
+      train.createdAt,
+      train.updatedAt,
+    ]),
+  )
 
   return [headers, ...rows]
     .map((row) => row.map((cell) => escapeCsvCell(cell)).join(','))
     .join('\r\n')
 }
 
-export function downloadFreightRecords(records: FreightRecord[]) {
-  const csv = `\uFEFF${buildCsvContent(records)}`
+export function downloadFreightRecords(trains: TrainRecord[]) {
+  const csv = `\uFEFF${buildCsvContent(trains)}`
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

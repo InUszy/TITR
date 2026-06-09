@@ -1,10 +1,18 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 
 interface CreateTrackingDrawerProps {
   open: boolean
   stationOptions: string[]
   onClose: () => void
+}
+
+interface ContainerFormEntry {
+  id: string
+  containerNo: string
+  waybillSmgsNo: string
+  ciplFile: File | null
+  smgsFile: File | null
 }
 
 interface FileUploadFieldProps {
@@ -14,6 +22,16 @@ interface FileUploadFieldProps {
   accept?: string
   deleteLabel: string
   uploadHint: string
+}
+
+function createEmptyContainer(id: string): ContainerFormEntry {
+  return {
+    id,
+    containerNo: '',
+    waybillSmgsNo: '',
+    ciplFile: null,
+    smgsFile: null,
+  }
 }
 
 function FileUploadField({ label, file, onChange, accept, deleteLabel, uploadHint }: FileUploadFieldProps) {
@@ -76,23 +94,52 @@ function FileUploadField({ label, file, onChange, accept, deleteLabel, uploadHin
 
 export function CreateTrackingDrawer({ open, stationOptions, onClose }: CreateTrackingDrawerProps) {
   const { t } = useLanguage()
+  const nextContainerId = useRef(1)
+  const [trainNo, setTrainNo] = useState('')
   const [departure, setDeparture] = useState('')
   const [arrival, setArrival] = useState('')
-  const [containerNo, setContainerNo] = useState('')
-  const [smgsNo, setSmgsNo] = useState('')
-  const [ciplFile, setCiplFile] = useState<File | null>(null)
-  const [smgsFile, setSmgsFile] = useState<File | null>(null)
-  const [customsFile, setCustomsFile] = useState<File | null>(null)
+  const [containers, setContainers] = useState<ContainerFormEntry[]>(() => [
+    createEmptyContainer('container-1'),
+  ])
+
+  const resetForm = () => {
+    nextContainerId.current = 1
+    setTrainNo('')
+    setDeparture('')
+    setArrival('')
+    setContainers([createEmptyContainer('container-1')])
+  }
+
+  useEffect(() => {
+    if (!open) {
+      resetForm()
+    }
+  }, [open])
 
   const handleClose = () => {
+    resetForm()
     onClose()
+  }
+
+  const updateContainer = (id: string, patch: Partial<ContainerFormEntry>) => {
+    setContainers((prev) => prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)))
+  }
+
+  const addContainer = () => {
+    nextContainerId.current += 1
+    const id = `container-${nextContainerId.current}`
+    setContainers((prev) => [...prev, createEmptyContainer(id)])
+  }
+
+  const removeContainer = (id: string) => {
+    setContainers((prev) => (prev.length <= 1 ? prev : prev.filter((entry) => entry.id !== id)))
   }
 
   if (!open) return null
 
   return (
     <div className="drawer-overlay" onClick={handleClose}>
-      <aside className="drawer-panel" onClick={(e) => e.stopPropagation()}>
+      <aside className="drawer-panel drawer-panel-wide" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-header">
           <button type="button" className="drawer-close" onClick={handleClose} aria-label={t('common.close')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -104,6 +151,24 @@ export function CreateTrackingDrawer({ open, stationOptions, onClose }: CreateTr
         </div>
 
         <div className="drawer-body">
+          <div className="drawer-section-label drawer-section-title">{t('createTracking.trainInfo')}</div>
+
+          <div className="drawer-form-row">
+            <div className="drawer-field">
+              <label className="drawer-label" htmlFor="drawer-train-no">
+                <span className="required">*</span> {t('freight.trainNo')}
+              </label>
+              <input
+                id="drawer-train-no"
+                type="text"
+                className="drawer-input"
+                placeholder={t('freight.trainNoPlaceholder')}
+                value={trainNo}
+                onChange={(e) => setTrainNo(e.target.value)}
+              />
+            </div>
+          </div>
+
           <div className="drawer-form-row">
             <div className="drawer-field">
               <label className="drawer-label">
@@ -140,61 +205,84 @@ export function CreateTrackingDrawer({ open, stationOptions, onClose }: CreateTr
             </div>
           </div>
 
-          <div className="tracking-form">
-            <div className="drawer-field">
-              <label className="drawer-label" htmlFor="drawer-container-no">
-                <span className="required">*</span> {t('freight.containerNo')}
-              </label>
-              <input
-                id="drawer-container-no"
-                type="text"
-                className="drawer-input"
-                placeholder={t('freight.containerNoPlaceholder')}
-                value={containerNo}
-                onChange={(e) => setContainerNo(e.target.value)}
-              />
-            </div>
+          <div className="drawer-section-header drawer-containers-header">
+            <span className="drawer-section-label">{t('createTracking.containerList')}</span>
+            <button type="button" className="drawer-add-container-btn" onClick={addContainer}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              {t('createTracking.addContainer')}
+            </button>
+          </div>
 
-            <div className="drawer-field">
-              <label className="drawer-label" htmlFor="drawer-smgs-no">
-                <span className="required">*</span> {t('createTracking.smgsNo')}
-              </label>
-              <input
-                id="drawer-smgs-no"
-                type="text"
-                className="drawer-input"
-                placeholder={t('createTracking.smgsPlaceholder')}
-                value={smgsNo}
-                onChange={(e) => setSmgsNo(e.target.value)}
-              />
-            </div>
+          <div className="drawer-containers-list">
+            {containers.map((entry, index) => (
+              <div key={entry.id} className="drawer-container-block">
+                <div className="drawer-container-block-header">
+                  <span className="drawer-container-block-title">
+                    {t('createTracking.containerIndex', { index: index + 1 })}
+                  </span>
+                  {containers.length > 1 && (
+                    <button
+                      type="button"
+                      className="drawer-remove-container-btn"
+                      onClick={() => removeContainer(entry.id)}
+                    >
+                      {t('createTracking.removeContainer')}
+                    </button>
+                  )}
+                </div>
 
-            <FileUploadField
-              label={t('createTracking.ciplFile')}
-              file={ciplFile}
-              onChange={setCiplFile}
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-              deleteLabel={t('common.delete')}
-              uploadHint={t('createTracking.uploadHint')}
-            />
+                <div className="drawer-form-row">
+                  <div className="drawer-field">
+                    <label className="drawer-label">
+                      <span className="required">*</span> {t('freight.containerNo')}
+                    </label>
+                    <input
+                      type="text"
+                      className="drawer-input"
+                      placeholder={t('freight.containerNoPlaceholder')}
+                      value={entry.containerNo}
+                      onChange={(e) => updateContainer(entry.id, { containerNo: e.target.value })}
+                    />
+                  </div>
 
-            <FileUploadField
-              label={t('createTracking.smgsFile')}
-              file={smgsFile}
-              onChange={setSmgsFile}
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-              deleteLabel={t('common.delete')}
-              uploadHint={t('createTracking.uploadHint')}
-            />
+                  <div className="drawer-field">
+                    <label className="drawer-label">
+                      <span className="required">*</span> {t('createTracking.waybillSmgsNo')}
+                    </label>
+                    <input
+                      type="text"
+                      className="drawer-input"
+                      placeholder={t('createTracking.waybillSmgsPlaceholder')}
+                      value={entry.waybillSmgsNo}
+                      onChange={(e) => updateContainer(entry.id, { waybillSmgsNo: e.target.value })}
+                    />
+                  </div>
+                </div>
 
-            <FileUploadField
-              label={t('createTracking.customsFile')}
-              file={customsFile}
-              onChange={setCustomsFile}
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-              deleteLabel={t('common.delete')}
-              uploadHint={t('createTracking.uploadHint')}
-            />
+                <div className="drawer-form-row drawer-file-row">
+                  <FileUploadField
+                    label={t('createTracking.ciplFile')}
+                    file={entry.ciplFile}
+                    onChange={(file) => updateContainer(entry.id, { ciplFile: file })}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    deleteLabel={t('common.delete')}
+                    uploadHint={t('createTracking.uploadHint')}
+                  />
+
+                  <FileUploadField
+                    label={t('createTracking.smgsFile')}
+                    file={entry.smgsFile}
+                    onChange={(file) => updateContainer(entry.id, { smgsFile: file })}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    deleteLabel={t('common.delete')}
+                    uploadHint={t('createTracking.uploadHint')}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

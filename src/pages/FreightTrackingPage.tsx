@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CreateTrackingDrawer } from '../components/CreateTrackingDrawer'
 import { DelayRiskPopover } from '../components/DelayRiskPopover'
 import { DocumentFilesModal } from '../components/DocumentFilesModal'
 import { FreightDetailPanel } from '../components/FreightDetailPanel'
 import { useLanguage, type Locale } from '../i18n/LanguageContext'
-import type { CustomsStatus, FreightRecord } from '../types/freight'
+import type { ContainerRecord, CustomsStatus, TrainRecord } from '../types/freight'
+import { trainContainsContainer } from '../types/freight'
 import { downloadFreightRecords } from '../utils/downloadFreightRecords'
 
 const MONTH_NAMES_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -58,15 +59,20 @@ function customsStatusClass(status: CustomsStatus) {
   }
 }
 
+interface FilesModalState {
+  train: TrainRecord
+  container: ContainerRecord
+}
+
 interface FreightTrackingPageProps {
-  data: FreightRecord[]
+  data: TrainRecord[]
   showDelayRisk?: boolean
 }
 
 export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrackingPageProps) {
   const { t, locale } = useLanguage()
 
-  const allRecords = useMemo(
+  const allTrains = useMemo(
     () => [...data].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     ),
@@ -74,30 +80,35 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
   )
 
   const departureOptions = useMemo(
-    () => [...new Set(allRecords.map((r) => r.departure?.city).filter(Boolean))] as string[],
-    [allRecords],
+    () => [...new Set(allTrains.map((r) => r.departure?.city).filter(Boolean))] as string[],
+    [allTrains],
   )
   const arrivalOptions = useMemo(
-    () => [...new Set(allRecords.map((r) => r.arrival?.city).filter(Boolean))] as string[],
-    [allRecords],
+    () => [...new Set(allTrains.map((r) => r.arrival?.city).filter(Boolean))] as string[],
+    [allTrains],
   )
   const stationOptions = useMemo(
     () => [...new Set([...departureOptions, ...arrivalOptions])],
     [departureOptions, arrivalOptions],
   )
 
+  const [trainNo, setTrainNo] = useState('')
   const [containerNo, setContainerNo] = useState('')
   const [departure, setDeparture] = useState('all')
   const [arrival, setArrival] = useState('all')
   const [dateStart, setDateStart] = useState('2025-01-01')
   const [dateEnd, setDateEnd] = useState('2026-06-05')
-  const [activeId, setActiveId] = useState<number | null>(null)
+  const [activeTrainId, setActiveTrainId] = useState<number | null>(null)
+  const [expandedTrainIds, setExpandedTrainIds] = useState<Set<number>>(() => new Set())
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [filesModalRecord, setFilesModalRecord] = useState<FreightRecord | null>(null)
+  const [filesModal, setFilesModal] = useState<FilesModalState | null>(null)
 
-  const records = useMemo(() => {
-    return allRecords.filter((row) => {
-      if (containerNo && !row.container.toLowerCase().includes(containerNo.toLowerCase())) {
+  const trains = useMemo(() => {
+    return allTrains.filter((row) => {
+      if (trainNo && !row.trainNo.toLowerCase().includes(trainNo.toLowerCase())) {
+        return false
+      }
+      if (containerNo && !trainContainsContainer(row, containerNo)) {
         return false
       }
       if (departure !== 'all' && row.departure?.city !== departure) {
@@ -112,14 +123,38 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
       }
       return true
     })
-  }, [allRecords, containerNo, departure, arrival, dateStart, dateEnd])
+  }, [allTrains, trainNo, containerNo, departure, arrival, dateStart, dateEnd])
 
-  const resolvedActiveId = activeId ?? records[0]?.id ?? null
-  const activeRecord = records.find((r) => r.id === resolvedActiveId) ?? records[0]
+  const resolvedActiveTrainId = activeTrainId ?? trains[0]?.id ?? null
+  const activeTrain = trains.find((r) => r.id === resolvedActiveTrainId) ?? trains[0]
 
-  const selectRow = (record: FreightRecord) => {
-    setActiveId(record.id)
+  const selectTrain = (train: TrainRecord) => {
+    setActiveTrainId(train.id)
   }
+
+  const toggleContainersExpanded = (trainId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setExpandedTrainIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(trainId)) {
+        next.delete(trainId)
+      } else {
+        next.add(trainId)
+      }
+      return next
+    })
+  }
+
+  const isContainersExpanded = (trainId: number) => expandedTrainIds.has(trainId)
+
+  useEffect(() => {
+    if (!containerNo) return
+    setExpandedTrainIds((prev) => {
+      const next = new Set(prev)
+      trains.forEach((train) => next.add(train.id))
+      return next
+    })
+  }, [containerNo, trains])
 
   return (
     <>
@@ -128,6 +163,18 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
       </div>
 
       <div className="filter-bar">
+        <div className="filter-field">
+          <label className="filter-label" htmlFor="train-no">{t('freight.trainNo')}</label>
+          <input
+            id="train-no"
+            type="text"
+            className="filter-input"
+            placeholder={t('freight.trainNoPlaceholder')}
+            value={trainNo}
+            onChange={(e) => setTrainNo(e.target.value)}
+          />
+        </div>
+
         <div className="filter-field">
           <label className="filter-label" htmlFor="container-no">{t('freight.containerNo')}</label>
           <input
@@ -206,8 +253,8 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
         <button
           type="button"
           className="freight-list-download-btn"
-          onClick={() => downloadFreightRecords(records)}
-          disabled={records.length === 0}
+          onClick={() => downloadFreightRecords(trains)}
+          disabled={trains.length === 0}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -222,13 +269,13 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
         <div className="table-section">
           <div className="table-wrapper">
             <div className="freight-timeline">
-              {records.map((row, index) => {
-                const { label, year, time } = formatTimelineDate(row.createdAt, locale, t('freight.monthSuffix'))
+              {trains.map((train, index) => {
+                const { label, year, time } = formatTimelineDate(train.createdAt, locale, t('freight.monthSuffix'))
                 return (
                   <div
-                    key={row.id}
-                    className={`timeline-item ${resolvedActiveId === row.id ? 'active' : ''}`}
-                    onClick={() => selectRow(row)}
+                    key={train.id}
+                    className={`timeline-item ${resolvedActiveTrainId === train.id ? 'active' : ''}`}
+                    onClick={() => selectTrain(train)}
                   >
                     <div className="timeline-axis">
                       <div className="timeline-date-block">
@@ -237,63 +284,100 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
                         <span className="timeline-time">{time}</span>
                       </div>
                       <div className="timeline-dot" />
-                      {index < records.length - 1 && <div className="timeline-line" />}
+                      {index < trains.length - 1 && <div className="timeline-line" />}
                     </div>
 
-                    <div className={`timeline-body${showDelayRisk && row.delayRisk ? ' has-delay-risk' : ''}`}>
-                      {showDelayRisk && row.delayRisk && (
-                        <DelayRiskPopover risk={row.delayRisk} />
+                    <div className={`timeline-body${showDelayRisk && train.delayRisk ? ' has-delay-risk' : ''}`}>
+                      {showDelayRisk && train.delayRisk && (
+                        <DelayRiskPopover risk={train.delayRisk} />
                       )}
                       <div className="timeline-grid">
                         <div className="timeline-row">
-                          <span className="timeline-label">{t('freight.container')}</span>
-                          <span className="timeline-value cell-container">{row.container}</span>
+                          <span className="timeline-label">{t('freight.trainNo')}</span>
+                          <span className="timeline-value cell-container">{train.trainNo}</span>
                         </div>
                         <div className="timeline-row">
-                          <span className="timeline-label">{t('freight.waybillNo')}</span>
-                          <span className="timeline-value">{row.waybillNo}</span>
+                          <span className="timeline-label">{t('freight.containerCount')}</span>
+                          <span className="timeline-value">{train.containers.length}</span>
                         </div>
                         <div className="timeline-row">
                           <span className="timeline-label">{t('freight.departure')}</span>
-                          <span className="timeline-value"><LocationCell location={row.departure} /></span>
+                          <span className="timeline-value"><LocationCell location={train.departure} /></span>
                         </div>
                         <div className="timeline-row">
                           <span className="timeline-label">{t('freight.arrival')}</span>
-                          <span className="timeline-value"><LocationCell location={row.arrival} /></span>
+                          <span className="timeline-value"><LocationCell location={train.arrival} /></span>
                         </div>
                         <div className="timeline-row">
                           <span className="timeline-label">{t('freight.currentStation')}</span>
-                          <span className="timeline-value"><LocationCell location={row.currentStation} /></span>
+                          <span className="timeline-value"><LocationCell location={train.currentStation} /></span>
                         </div>
                         <div className="timeline-row">
                           <span className="timeline-label">{t('freight.status')}</span>
-                          <span className="timeline-value status-text">{row.status}</span>
-                        </div>
-                        <div className="timeline-row">
-                          <span className="timeline-label">{t('freight.customsStatus')}</span>
-                          <span className={`timeline-value customs-status ${customsStatusClass(row.customsStatus)}`}>
-                            {mapCustomsStatus(row.customsStatus, t)}
-                          </span>
-                        </div>
-                        <div className="timeline-row timeline-row-full">
-                          <span className="timeline-label">{t('freight.attachments')}</span>
-                          <span className="timeline-value timeline-files">
-                            <span className="file-chip" title={row.ciplFile.name}>CIPL</span>
-                            <span className="file-chip" title={row.smgsFile.name}>SMGS</span>
-                            <span className="file-chip" title={row.customsFile.name}>{t('freight.customsDoc')}</span>
-                            <button
-                              type="button"
-                              className="btn-view-files"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setFilesModalRecord(row)
-                              }}
-                            >
-                              {t('freight.show')}
-                            </button>
-                          </span>
+                          <span className="timeline-value status-text">{train.status}</span>
                         </div>
                       </div>
+
+                      <div className="train-containers-section">
+                        <button
+                          type="button"
+                          className={`train-containers-toggle${isContainersExpanded(train.id) ? ' expanded' : ''}`}
+                          onClick={(e) => toggleContainersExpanded(train.id, e)}
+                          aria-expanded={isContainersExpanded(train.id)}
+                        >
+                          <span className="train-containers-toggle-label">
+                            {isContainersExpanded(train.id)
+                              ? t('freight.collapseContainers')
+                              : t('freight.expandContainers', { count: train.containers.length })}
+                          </span>
+                          <svg className="train-containers-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </button>
+                        {isContainersExpanded(train.id) && (
+                          <div className="train-containers-list">
+                            {train.containers.map((container) => (
+                              <div key={container.id} className="train-container-card">
+                                <div className="train-container-grid">
+                                  <div className="timeline-row">
+                                    <span className="timeline-label">{t('freight.container')}</span>
+                                    <span className="timeline-value cell-container">{container.container}</span>
+                                  </div>
+                                  <div className="timeline-row">
+                                    <span className="timeline-label">{t('freight.waybillNo')}</span>
+                                    <span className="timeline-value">{container.waybillNo}</span>
+                                  </div>
+                                  <div className="timeline-row">
+                                    <span className="timeline-label">{t('freight.customsStatus')}</span>
+                                    <span className={`timeline-value customs-status ${customsStatusClass(container.customsStatus)}`}>
+                                      {mapCustomsStatus(container.customsStatus, t)}
+                                    </span>
+                                  </div>
+                                  <div className="timeline-row timeline-row-full">
+                                    <span className="timeline-label">{t('freight.attachments')}</span>
+                                    <span className="timeline-value timeline-files">
+                                      <span className="file-chip" title={container.ciplFile.name}>CIPL</span>
+                                      <span className="file-chip" title={container.smgsFile.name}>SMGS</span>
+                                      <span className="file-chip" title={container.customsFile.name}>{t('freight.customsDoc')}</span>
+                                      <button
+                                        type="button"
+                                        className="btn-view-files"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setFilesModal({ train, container })
+                                        }}
+                                      >
+                                        {t('freight.show')}
+                                      </button>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       <div className="timeline-actions">
                         <button type="button" className="action-btn" aria-label={t('common.delete')} onClick={(e) => e.stopPropagation()}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -319,8 +403,8 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
           </div>
         </div>
 
-        {activeRecord && (
-          <FreightDetailPanel record={activeRecord} />
+        {activeTrain && (
+          <FreightDetailPanel train={activeTrain} />
         )}
       </div>
 
@@ -330,17 +414,19 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
         onClose={() => setDrawerOpen(false)}
       />
 
-      {filesModalRecord && (
+      {filesModal && (
         <DocumentFilesModal
-          open={Boolean(filesModalRecord)}
-          container={filesModalRecord.container}
-          waybillNo={filesModalRecord.waybillNo}
-          smgsNo={filesModalRecord.smgsNo}
-          customsStatus={filesModalRecord.customsStatus}
-          ciplFile={filesModalRecord.ciplFile}
-          smgsFile={filesModalRecord.smgsFile}
-          customsFile={filesModalRecord.customsFile}
-          onClose={() => setFilesModalRecord(null)}
+          open={Boolean(filesModal)}
+          trainNo={filesModal.train.trainNo}
+          container={filesModal.container.container}
+          waybillNo={filesModal.container.waybillNo}
+          smgsNo={filesModal.container.smgsNo}
+          customsStatus={filesModal.container.customsStatus}
+          hsCode={filesModal.container.hsCode}
+          ciplFile={filesModal.container.ciplFile}
+          smgsFile={filesModal.container.smgsFile}
+          customsFile={filesModal.container.customsFile}
+          onClose={() => setFilesModal(null)}
         />
       )}
     </>

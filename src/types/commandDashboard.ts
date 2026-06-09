@@ -40,10 +40,15 @@ export interface RiskAlert {
   time: string
 }
 
-export interface ActiveTrajectory {
-  id: string
+export interface TrajectoryContainer {
   containerNo: string
   waybillNo: string
+}
+
+export interface ActiveTrajectory {
+  id: string
+  trainNo: string
+  containers: TrajectoryContainer[]
   currentNodeId: string
   routeNodeIds: string[]
   progress: number
@@ -112,12 +117,97 @@ export const riskAlerts: RiskAlert[] = [
 ]
 
 export const activeTrajectories: ActiveTrajectory[] = [
-  { id: 'T1', containerNo: 'CICU1018860', waybillNo: 'WB-2026-050801', currentNodeId: 'altynkol', routeNodeIds: ['xian', 'khorgos', 'altynkol', 'aktau', 'baku', 'poti', 'duisburg'], progress: 38, riskLevel: 'none', updatedAt: '2026-06-08 14:28' },
-  { id: 'T2', containerNo: 'CICU1018867', waybillNo: 'WB-2026-050902', currentNodeId: 'khorgos', routeNodeIds: ['xian', 'khorgos', 'altynkol', 'baku', 'istanbul', 'budapest'], progress: 22, riskLevel: 'low', updatedAt: '2026-06-08 14:15' },
-  { id: 'T3', containerNo: 'MSCU9876543', waybillNo: 'WB-2026-052501', currentNodeId: 'baku', routeNodeIds: ['lianyungang', 'xian', 'khorgos', 'aktau', 'baku', 'poti', 'warsaw'], progress: 56, riskLevel: 'none', updatedAt: '2026-06-08 13:52' },
-  { id: 'T4', containerNo: 'TCLU8899001', waybillNo: 'WB-2026-042801', currentNodeId: 'poti', routeNodeIds: ['xian', 'khorgos', 'altynkol', 'baku', 'poti', 'tbilisi', 'duisburg'], progress: 62, riskLevel: 'high', updatedAt: '2026-06-08 13:40' },
-  { id: 'T5', containerNo: 'TBJU1234567', waybillNo: 'WB-2026-051201', currentNodeId: 'xian', routeNodeIds: ['xian', 'khorgos', 'astana', 'altynkol'], progress: 8, riskLevel: 'none', updatedAt: '2026-06-08 12:18' },
-  { id: 'T6', containerNo: 'HLXU3344556', waybillNo: 'WB-2026-038901', currentNodeId: 'kars', routeNodeIds: ['urumqi', 'khorgos', 'baku', 'poti', 'kars', 'istanbul', 'budapest'], progress: 71, riskLevel: 'medium', updatedAt: '2026-06-08 11:55' },
+  {
+    id: 'TR1',
+    trainNo: 'XL20260508001',
+    containers: [
+      { containerNo: 'CICU1018860', waybillNo: 'SMGS-2026-00101' },
+      { containerNo: 'CICU1018867', waybillNo: 'SMGS-2026-00108' },
+      { containerNo: 'TRAU9815540', waybillNo: 'SMGS-2026-00215' },
+      { containerNo: 'TCKU7723104', waybillNo: 'SMGS-2026-00112' },
+      { containerNo: 'MSKU4458921', waybillNo: 'SMGS-2026-00119' },
+      { containerNo: 'HLBU9032145', waybillNo: 'SMGS-2026-00125' },
+    ],
+    currentNodeId: 'altynkol',
+    routeNodeIds: ['xian', 'khorgos', 'altynkol', 'aktau', 'baku', 'poti', 'duisburg'],
+    progress: 38,
+    riskLevel: 'none',
+    updatedAt: '2026-06-08 14:28',
+  },
+  {
+    id: 'TR2',
+    trainNo: 'XL20260524002',
+    containers: [
+      { containerNo: 'CICU1023456', waybillNo: 'SMGS-2026-00228' },
+      { containerNo: 'TGHU5567890', waybillNo: 'SMGS-2026-00235' },
+      { containerNo: 'BEAU6678123', waybillNo: 'SMGS-2026-00242' },
+      { containerNo: 'CSNU8890456', waybillNo: 'SMGS-2026-00249' },
+    ],
+    currentNodeId: 'khorgos',
+    routeNodeIds: ['xian', 'khorgos', 'altynkol', 'baku', 'istanbul', 'budapest'],
+    progress: 22,
+    riskLevel: 'low',
+    updatedAt: '2026-06-08 14:15',
+  },
+  {
+    id: 'TR3',
+    trainNo: 'XL20260525003',
+    containers: [
+      { containerNo: 'MSCU7654321', waybillNo: 'SMGS-2026-00301' },
+      { containerNo: 'HLCU8890123', waybillNo: 'SMGS-2026-00308' },
+      { containerNo: 'IRNU3345678', waybillNo: 'SMGS-2026-00315' },
+      { containerNo: 'JKTU6678901', waybillNo: 'SMGS-2026-00322' },
+      { containerNo: 'KOCU7789234', waybillNo: 'SMGS-2026-00329' },
+    ],
+    currentNodeId: 'baku',
+    routeNodeIds: ['lianyungang', 'xian', 'khorgos', 'aktau', 'baku', 'poti', 'warsaw'],
+    progress: 56,
+    riskLevel: 'none',
+    updatedAt: '2026-06-08 13:52',
+  },
+  {
+    id: 'TR4',
+    trainNo: 'XL20260428004',
+    containers: [
+      { containerNo: 'TCLU8899001', waybillNo: 'SMGS-2026-042801' },
+      { containerNo: 'FCIU8890234', waybillNo: 'SMGS-2026-04141' },
+      { containerNo: 'GESU5567123', waybillNo: 'SMGS-2026-04133' },
+    ],
+    currentNodeId: 'poti',
+    routeNodeIds: ['xian', 'khorgos', 'altynkol', 'baku', 'poti', 'tbilisi', 'duisburg'],
+    progress: 62,
+    riskLevel: 'high',
+    updatedAt: '2026-06-08 13:40',
+  },
+  {
+    id: 'TR5',
+    trainNo: 'XL20260512005',
+    containers: [
+      { containerNo: 'TBJU1234567', waybillNo: 'SMGS-2026-051201' },
+      { containerNo: 'OOLU7789012', waybillNo: 'SMGS-2026-05162' },
+      { containerNo: 'NYKU2234567', waybillNo: 'SMGS-2026-05170' },
+    ],
+    currentNodeId: 'xian',
+    routeNodeIds: ['xian', 'khorgos', 'astana', 'altynkol'],
+    progress: 8,
+    riskLevel: 'none',
+    updatedAt: '2026-06-08 12:18',
+  },
+  {
+    id: 'TR6',
+    trainNo: 'XL20260315006',
+    containers: [
+      { containerNo: 'HLXU3344556', waybillNo: 'SMGS-2026-038901' },
+      { containerNo: 'CMAU3345678', waybillNo: 'SMGS-2026-03855' },
+      { containerNo: 'TCLU6678901', waybillNo: 'SMGS-2026-03848' },
+      { containerNo: 'FFAU2234567', waybillNo: 'SMGS-2026-03870' },
+    ],
+    currentNodeId: 'kars',
+    routeNodeIds: ['urumqi', 'khorgos', 'baku', 'poti', 'kars', 'istanbul', 'budapest'],
+    progress: 71,
+    riskLevel: 'medium',
+    updatedAt: '2026-06-08 11:55',
+  },
 ]
 
 export function getNodeById(id: string) {

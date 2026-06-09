@@ -3,10 +3,12 @@ import type { CustomsStatus, TrackingFile } from '../types/freight'
 
 interface DocumentFilesModalProps {
   open: boolean
+  trainNo?: string
   container: string
   waybillNo: string
   smgsNo: string
   customsStatus: CustomsStatus
+  hsCode: string
   ciplFile: TrackingFile
   smgsFile: TrackingFile
   customsFile: TrackingFile
@@ -25,6 +27,8 @@ function buildPreviewHtml(
   waybillNo: string,
   smgsNo: string,
   customsStatus: CustomsStatus,
+  hsCode: string,
+  hsCodeLabel: string,
   file: TrackingFile,
 ) {
   const rows = title === 'CIPL'
@@ -56,6 +60,7 @@ function buildPreviewHtml(
           ['贸易方式', '一般贸易'],
           ['收发货人', 'SZY Trading Co.'],
           ['货物名称', '电子元器件'],
+          [hsCodeLabel, hsCode],
           ['报关状态', customsStatus],
         ]
 
@@ -156,6 +161,7 @@ function FilePreviewPane({
   waybillNo,
   smgsNo,
   customsStatus,
+  hsCode,
   file,
   downloadLabel,
 }: {
@@ -164,10 +170,21 @@ function FilePreviewPane({
   waybillNo: string
   smgsNo: string
   customsStatus: CustomsStatus
+  hsCode?: string
   file: TrackingFile
   downloadLabel: string
 }) {
-  const previewHtml = buildPreviewHtml(label, container, waybillNo, smgsNo, customsStatus, file)
+  const { t } = useLanguage()
+  const previewHtml = buildPreviewHtml(
+    label,
+    container,
+    waybillNo,
+    smgsNo,
+    customsStatus,
+    hsCode ?? '—',
+    t('documentModal.hsCode'),
+    file,
+  )
 
   return (
     <div className="doc-preview-pane">
@@ -201,10 +218,12 @@ function FilePreviewPane({
 
 export function DocumentFilesModal({
   open,
+  trainNo,
   container,
   waybillNo,
   smgsNo,
   customsStatus,
+  hsCode,
   ciplFile,
   smgsFile,
   customsFile,
@@ -223,7 +242,10 @@ export function DocumentFilesModal({
         <div className="modal-header">
           <div>
             <h2 className="modal-title">{t('documentModal.title')}</h2>
-            <p className="modal-subtitle">{t('freight.container')} {container} · {t('freight.waybillNo')} {waybillNo}</p>
+            <p className="modal-subtitle">
+              {trainNo && <>{t('freight.trainNo')} {trainNo} · </>}
+              {t('freight.container')} {container} · {t('freight.waybillNo')} {waybillNo}
+            </p>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -236,7 +258,7 @@ export function DocumentFilesModal({
         <div className="modal-body modal-body-preview modal-body-preview-3">
           <FilePreviewPane label="CIPL" file={ciplFile} downloadLabel={downloadLabel} {...paneProps} />
           <FilePreviewPane label="SMGS" file={smgsFile} downloadLabel={downloadLabel} {...paneProps} />
-          <FilePreviewPane label={t('freight.customsDoc')} file={customsFile} downloadLabel={downloadLabel} {...paneProps} />
+          <FilePreviewPane label={t('freight.customsDoc')} file={customsFile} hsCode={hsCode} downloadLabel={downloadLabel} {...paneProps} />
         </div>
       </div>
     </div>

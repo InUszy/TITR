@@ -226,16 +226,84 @@ export function Sidebar({
       <nav className="nav-menu">
 
         {isAdmin && (
+          <button
+            type="button"
+            className={`nav-item ${activePage === 'command' ? 'active' : ''}`}
+            onClick={() => onPageChange('command')}
+          >
+            {icons.command}
+            {t('sidebar.command')}
+          </button>
+        )}
+
+        <button
+          type="button"
+          className={`nav-item ${activePage === 'freight' ? 'active' : ''}`}
+          onClick={() => onPageChange('freight')}
+        >
+          {icons.location}
+          {t('sidebar.freight')}
+          <span className="nav-arrow">{freightExpanded ? icons.chevronUp : icons.chevronDown}</span>
+        </button>
+
+        {freightExpanded && (
+          <div className="nav-sub">
+            <button
+              type="button"
+              className={`nav-sub-item ${trackingView === 'regular' ? 'active' : ''}`}
+              onClick={() => {
+                onPageChange('freight')
+                onTrackingViewChange('regular')
+              }}
+            >
+              {t('sidebar.regular')}
+            </button>
+            <button
+              type="button"
+              className={`nav-sub-item ${trackingView === 'archived' ? 'active' : ''}`}
+              onClick={() => {
+                onPageChange('freight')
+                onTrackingViewChange('archived')
+              }}
+            >
+              {t('sidebar.archived')}
+            </button>
+          </div>
+        )}
+
+        {isAdmin && (
           <>
             <button
               type="button"
-              className={`nav-item ${activePage === 'command' ? 'active' : ''}`}
-              onClick={() => onPageChange('command')}
+              className={`nav-item ${activePage === 'dataExport' ? 'active' : ''}`}
+              onClick={() => onPageChange('dataExport')}
             >
-              {icons.command}
-              {t('sidebar.command')}
+              {icons.dataExport}
+              {t('sidebar.dataExport')}
             </button>
 
+            <button
+              type="button"
+              className={`nav-item ${activePage === 'aggregation' ? 'active' : ''}`}
+              onClick={() => onPageChange('aggregation')}
+            >
+              {icons.aggregation}
+              {t('sidebar.aggregation')}
+            </button>
+          </>
+        )}
+
+        <button
+          type="button"
+          className={`nav-item ${activePage === 'files' ? 'active' : ''}`}
+          onClick={() => onPageChange('files')}
+        >
+          {icons.files}
+          {t('sidebar.files')}
+        </button>
+
+        {isAdmin && (
+          <>
             <button
               type="button"
               className={`nav-item ${systemExpanded ? 'active' : ''}`}
@@ -271,103 +339,6 @@ export function Sidebar({
               </div>
             )}
           </>
-        )}
-
-        <button
-          type="button"
-          className={`nav-item ${activePage === 'files' ? 'active' : ''}`}
-          onClick={() => onPageChange('files')}
-        >
-          {icons.files}
-          {t('sidebar.files')}
-        </button>
-
-        {isAdmin && (
-          <>
-            <button
-              type="button"
-              className={`nav-item ${activePage === 'dataExport' ? 'active' : ''}`}
-              onClick={() => onPageChange('dataExport')}
-            >
-              {icons.dataExport}
-              {t('sidebar.dataExport')}
-            </button>
-
-            <button
-              type="button"
-              className={`nav-item ${activePage === 'aggregation' ? 'active' : ''}`}
-              onClick={() => onPageChange('aggregation')}
-            >
-              {icons.aggregation}
-              {t('sidebar.aggregation')}
-            </button>
-          </>
-        )}
-
-        <button
-
-          type="button"
-
-          className={`nav-item ${activePage === 'freight' ? 'active' : ''}`}
-
-          onClick={() => onPageChange('freight')}
-
-        >
-
-          {icons.location}
-
-          {t('sidebar.freight')}
-
-          <span className="nav-arrow">{freightExpanded ? icons.chevronUp : icons.chevronDown}</span>
-
-        </button>
-
-        {freightExpanded && (
-
-          <div className="nav-sub">
-
-            <button
-
-              type="button"
-
-              className={`nav-sub-item ${trackingView === 'regular' ? 'active' : ''}`}
-
-              onClick={() => {
-
-                onPageChange('freight')
-
-                onTrackingViewChange('regular')
-
-              }}
-
-            >
-
-              {t('sidebar.regular')}
-
-            </button>
-
-            <button
-
-              type="button"
-
-              className={`nav-sub-item ${trackingView === 'archived' ? 'active' : ''}`}
-
-              onClick={() => {
-
-                onPageChange('freight')
-
-                onTrackingViewChange('archived')
-
-              }}
-
-            >
-
-              {t('sidebar.archived')}
-
-            </button>
-
-          </div>
-
         )}
 
       </nav>

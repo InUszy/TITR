@@ -1,16 +1,16 @@
 import { useLanguage } from '../i18n/LanguageContext'
-import type { FreightRecord } from '../types/freight'
+import type { TrainRecord } from '../types/freight'
 import { downloadTrackingHistory } from '../utils/downloadTrackingHistory'
 import { DetailRouteMap } from './DetailRouteMap'
 import { MapStationTooltip } from './MapStationTooltip'
 
 interface FreightDetailPanelProps {
-  record: FreightRecord
+  train: TrainRecord
 }
 
-export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
+export function FreightDetailPanel({ train }: FreightDetailPanelProps) {
   const { t } = useLanguage()
-  const detail = record.detail
+  const detail = train.detail
 
   return (
     <div className="detail-panel">
@@ -42,10 +42,12 @@ export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
           </div>
         </div>
 
-        <div className="map-container-label">{t('freight.container')} - {record.container}</div>
+        <div className="map-container-label">
+          {t('freight.trainNo')} - {train.trainNo}
+        </div>
 
         <MapStationTooltip
-          container={record.container}
+          container={train.trainNo}
           stationName={detail.currentStationName}
           distanceToEnd={detail.distanceToEnd}
           stationInfo={detail.currentStationInfo}
@@ -94,11 +96,11 @@ export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
             </div>
             <div className="status-item">
               <span className="status-label">{t('freight.status')}</span>
-              <span className="status-value status-highlight">{record.status}</span>
+              <span className="status-value status-highlight">{train.status}</span>
             </div>
             <div className="status-item">
               <span className="status-label">{t('freightDetail.wagonNo')}</span>
-              <span className="status-value">{record.carriageNo}</span>
+              <span className="status-value">{train.carriageNo}</span>
             </div>
           </div>
         </div>
@@ -115,7 +117,7 @@ export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
             <button
               type="button"
               className="history-download-btn"
-              onClick={() => downloadTrackingHistory(record)}
+              onClick={() => downloadTrackingHistory(train)}
               disabled={detail.trackingHistory.length === 0}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

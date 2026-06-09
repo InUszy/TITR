@@ -1,4 +1,4 @@
-import { archivedMockData, mockData, type FreightRecord, type TrackingFile } from './freight'
+import { archivedMockData, mockData, type ContainerRecord, type TrainRecord, type TrackingFile } from './freight'
 import { userManagementMockData } from './userManagement'
 
 export type FileCategory =
@@ -100,14 +100,15 @@ function buildBlockchainRecord(fileId: string, uploadedAt: string): BlockchainRe
 }
 
 function freightDocRecord(
-  record: FreightRecord,
+  train: TrainRecord,
+  container: ContainerRecord,
   file: TrackingFile,
   category: 'cipl' | 'smgs' | 'customs',
   categoryLabel: string,
   notarized: boolean,
   pending = false,
 ): SystemFileRecord {
-  const id = `${category}-${record.id}-${record.container}`
+  const id = `${category}-${train.id}-${container.id}-${container.container}`
   return {
     id,
     name: file.name,
@@ -115,26 +116,30 @@ function freightDocRecord(
     categoryLabel,
     size: file.size,
     uploadedAt: file.uploadedAt,
-    ownerName: record.company === '-' ? '平台用户' : record.company,
-    ownerId: String(record.id),
-    relatedContainer: record.container,
-    relatedWaybill: record.waybillNo,
+    ownerName: container.company === '-' ? '平台用户' : container.company,
+    ownerId: String(train.id),
+    relatedContainer: container.container,
+    relatedWaybill: container.waybillNo,
     blockchainRequired: true,
     blockchainStatus: pending ? 'pending' : notarized ? 'notarized' : 'none',
     blockchain: notarized || pending ? buildBlockchainRecord(id, file.uploadedAt) : undefined,
   }
 }
 
-function buildFreightFiles(records: FreightRecord[]): SystemFileRecord[] {
+function buildFreightFiles(trains: TrainRecord[]): SystemFileRecord[] {
   const files: SystemFileRecord[] = []
-  records.forEach((record, index) => {
-    const notarized = index % 5 !== 4
-    const pending = index % 7 === 3 && !notarized
-    files.push(
-      freightDocRecord(record, record.ciplFile, 'cipl', 'CIPL', notarized, pending),
-      freightDocRecord(record, record.smgsFile, 'smgs', 'SMGS', notarized || index % 3 === 0, false),
-      freightDocRecord(record, record.customsFile, 'customs', '报关单', notarized, pending && index % 2 === 0),
-    )
+  let index = 0
+  trains.forEach((train) => {
+    train.containers.forEach((container) => {
+      const notarized = index % 5 !== 4
+      const pending = index % 7 === 3 && !notarized
+      files.push(
+        freightDocRecord(train, container, container.ciplFile, 'cipl', 'CIPL', notarized, pending),
+        freightDocRecord(train, container, container.smgsFile, 'smgs', 'SMGS', notarized || index % 3 === 0, false),
+        freightDocRecord(train, container, container.customsFile, 'customs', '报关单', notarized, pending && index % 2 === 0),
+      )
+      index += 1
+    })
   })
   return files
 }
