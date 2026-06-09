@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { TablePagination } from '../components/TablePagination'
+import { useLanguage } from '../i18n/LanguageContext'
 import {
-  auditStatusLabel,
   userManagementMockData,
   type AuditStatus,
   type ManagedUser,
@@ -10,10 +10,11 @@ import {
 const PAGE_SIZE = 20
 
 function StatusBadge({ status }: { status: AuditStatus }) {
+  const { t } = useLanguage()
   return (
     <span className={`audit-status audit-status-${status}`}>
       <span className="audit-status-dot" />
-      {auditStatusLabel(status)}
+      {t(`users.audit.${status}`)}
     </span>
   )
 }
@@ -31,6 +32,7 @@ function CompanyCell({ user }: { user: ManagedUser }) {
 }
 
 export function UserManagementPage() {
+  const { t } = useLanguage()
   const [companyKeyword, setCompanyKeyword] = useState('')
   const [dateStart, setDateStart] = useState('')
   const [dateEnd, setDateEnd] = useState('')
@@ -62,7 +64,7 @@ export function UserManagementPage() {
   return (
     <>
       <div className="page-header user-mgmt-header">
-        <h1 className="page-title">用户管理</h1>
+        <h1 className="page-title">{t('users.title')}</h1>
       </div>
 
       <div className="user-mgmt-toolbar">
@@ -70,12 +72,12 @@ export function UserManagementPage() {
           <input
             type="text"
             className="user-mgmt-search-input"
-            placeholder="请输入公司名称"
+            placeholder={t('users.companyPlaceholder')}
             value={companyKeyword}
             onChange={(e) => setCompanyKeyword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
-          <button type="button" className="user-mgmt-search-btn" aria-label="搜索" onClick={handleSearch}>
+          <button type="button" className="user-mgmt-search-btn" aria-label={t('common.search')} onClick={handleSearch}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -84,7 +86,7 @@ export function UserManagementPage() {
         </div>
 
         <div className="filter-field user-mgmt-date-filter">
-          <span className="filter-label">创建时间</span>
+          <span className="filter-label">{t('users.createdAt')}</span>
           <div className="date-range">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -121,12 +123,12 @@ export function UserManagementPage() {
             <thead>
               <tr>
                 <th>ID Number</th>
-                <th>公司名称</th>
-                <th>公司名称(英文)</th>
+                <th>{t('users.companyName')}</th>
+                <th>{t('users.companyNameEn')}</th>
                 <th>BIN</th>
-                <th>创建时间</th>
-                <th>用户状态</th>
-                <th>文件状态</th>
+                <th>{t('users.createdAt')}</th>
+                <th>{t('users.userStatus')}</th>
+                <th>{t('users.fileStatus')}</th>
               </tr>
             </thead>
             <tbody>

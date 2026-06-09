@@ -1,10 +1,20 @@
 import { useMemo, useState } from 'react'
+import { useLanguage } from '../i18n/LanguageContext'
 import {
   AGGREGATION_STATIONS,
   aggregationMockData,
+  truncateAggHash,
+  type AggregationBlockchain,
+  type AggregationBlockchainStatus,
   type AggregationMessage,
   type AggregationStructuredData,
 } from '../types/dataAggregation'
+
+const AGG_CERT_KEY: Record<AggregationBlockchainStatus, 'certified' | 'certifying' | 'none'> = {
+  notarized: 'certified',
+  pending: 'certifying',
+  none: 'none',
+}
 
 function formatTimelineDate(dateStr: string) {
   const [datePart, timePart] = dateStr.split(' ')
@@ -14,6 +24,16 @@ function formatTimelineDate(dateStr: string) {
     year: datePart.slice(0, 4),
     time: timePart?.slice(0, 8) ?? '',
   }
+}
+
+function BlockchainStatusBadge({ status }: { status: AggregationBlockchainStatus }) {
+  const { t } = useLanguage()
+  if (status === 'none') return null
+  return (
+    <span className={`agg-chain-status agg-chain-status-${status}`}>
+      {t(`aggregation.cert.${AGG_CERT_KEY[status]}`)}
+    </span>
+  )
 }
 
 function StructuredFields({ data }: { data: AggregationStructuredData }) {
@@ -46,12 +66,93 @@ function fieldLabel(key: string) {
   return labels[key] ?? key
 }
 
+function AggregationBlockchainModal({
+  message,
+  onClose,
+}: {
+  message: AggregationMessage
+  onClose: () => void
+}) {
+  const { t } = useLanguage()
+  const chain = message.blockchain as AggregationBlockchain
+
+  return (
+    <div className="file-modal-overlay" onClick={onClose}>
+      <div className="export-detail-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="file-modal-header">
+          <div>
+            <h2 className="file-modal-title">{t('aggregation.modalTitle')}</h2>
+            <p className="file-modal-subtitle">
+              {message.station} · {message.structured.eventType}
+            </p>
+          </div>
+          <button type="button" className="file-modal-close" onClick={onClose} aria-label={t('common.close')}>
+            ×
+          </button>
+        </div>
+
+        <div className="file-modal-body">
+          <div className="chain-info-banner">
+            <span className="chain-info-icon">⛓</span>
+            <div>
+              <strong>{chain.chainName}</strong>
+              <span className="chain-info-network">{chain.network}</span>
+            </div>
+            <BlockchainStatusBadge status={message.blockchainStatus} />
+          </div>
+
+          <dl className="chain-info-grid">
+            <div className="chain-info-item">
+              <dt>{t('blockchain.txHash')}</dt>
+              <dd><code title={chain.txHash}>{chain.txHash}</code></dd>
+            </div>
+            <div className="chain-info-item">
+              <dt>{t('blockchain.dataHash')}</dt>
+              <dd><code title={chain.dataHash}>{chain.dataHash}</code></dd>
+            </div>
+            <div className="chain-info-item">
+              <dt>{t('blockchain.blockHeight')}</dt>
+              <dd>{chain.blockHeight.toLocaleString()}</dd>
+            </div>
+            <div className="chain-info-item">
+              <dt>{t('blockchain.blockTime')}</dt>
+              <dd>{chain.blockTime}</dd>
+            </div>
+            <div className="chain-info-item">
+              <dt>{t('blockchain.certTime')}</dt>
+              <dd>{chain.notarizedAt}</dd>
+            </div>
+            <div className="chain-info-item">
+              <dt>{t('blockchain.confirmations')}</dt>
+              <dd>{chain.confirmations}</dd>
+            </div>
+            <div className="chain-info-item chain-info-item-full">
+              <dt>{t('blockchain.contract')}</dt>
+              <dd><code title={chain.contractAddress}>{chain.contractAddress}</code></dd>
+            </div>
+            <div className="chain-info-item chain-info-item-full">
+              <dt>{t('blockchain.node')}</dt>
+              <dd>{chain.verifier}</dd>
+            </div>
+          </dl>
+
+          <div className="chain-verify-note">
+            {t('aggregation.certDesc')}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AggregationTimelineItem({ message }: { message: AggregationMessage }) {
+  const { t } = useLanguage()
   const [rawExpanded, setRawExpanded] = useState(false)
+  const [chainModalOpen, setChainModalOpen] = useState(false)
   const { label, year, time } = formatTimelineDate(message.receivedAt)
 
   return (
-    <div className="agg-timeline-item">
+    <div className={`agg-timeline-item ${message.blockchainRequired ? 'agg-timeline-item-key' : ''}`}>
       <div className="timeline-axis">
         <div className="timeline-date-block">
           <span className="timeline-date">{label}</span>
@@ -67,12 +168,50 @@ function AggregationTimelineItem({ message }: { message: AggregationMessage }) {
           <span className="agg-station-badge">{message.station}</span>
           <span className="agg-source">{message.sourceSystem}</span>
           <span className="agg-event-type">{message.structured.eventType}</span>
+          {message.blockchainRequired && (
+            <span className="agg-key-event-badge">{t('aggregation.keyEvent')}</span>
+          )}
+          {message.blockchainRequired && (
+            <BlockchainStatusBadge status={message.blockchainStatus} />
+          )}
         </div>
 
         <div className="agg-section">
-          <h4 className="agg-section-title">结构化数据</h4>
+          <h4 className="agg-section-title">{t('aggregation.structuredData')}</h4>
           <StructuredFields data={message.structured} />
         </div>
+
+        {message.blockchainRequired && (
+          <div className="agg-section agg-blockchain-section">
+            <h4 className="agg-section-title">{t('aggregation.blockchainCert')}</h4>
+            <div className="agg-blockchain-panel">
+              <div className="agg-blockchain-summary">
+                <span className="agg-blockchain-label">{t('aggregation.certStatus')}</span>
+                <BlockchainStatusBadge status={message.blockchainStatus} />
+              </div>
+              {message.blockchain && (
+                <div className="agg-blockchain-summary">
+                  <span className="agg-blockchain-label">{t('blockchain.txHash')}</span>
+                  <code className="agg-blockchain-hash" title={message.blockchain.txHash}>
+                    {truncateAggHash(message.blockchain.txHash)}
+                  </code>
+                </div>
+              )}
+              {message.blockchainStatus === 'notarized' && message.blockchain && (
+                <button
+                  type="button"
+                  className="file-action-btn"
+                  onClick={() => setChainModalOpen(true)}
+                >
+                  {t('aggregation.viewChain')}
+                </button>
+              )}
+              {message.blockchainStatus === 'pending' && (
+                <p className="agg-blockchain-pending">{t('aggregation.certPending')}</p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="agg-section">
           <button
@@ -92,19 +231,25 @@ function AggregationTimelineItem({ message }: { message: AggregationMessage }) {
             >
               <polyline points="6 9 12 15 18 9" />
             </svg>
-            原始数据
+            {t('aggregation.rawData')}
           </button>
           {rawExpanded && (
             <pre className="agg-raw-content">{message.rawData}</pre>
           )}
         </div>
       </div>
+
+      {chainModalOpen && message.blockchain && (
+        <AggregationBlockchainModal message={message} onClose={() => setChainModalOpen(false)} />
+      )}
     </div>
   )
 }
 
 export function DataAggregationPage() {
+  const { t } = useLanguage()
   const [station, setStation] = useState('all')
+  const [keyEventOnly, setKeyEventOnly] = useState(false)
   const [dateStart, setDateStart] = useState('2026-05-15')
   const [dateEnd, setDateEnd] = useState('2026-05-26')
 
@@ -112,29 +257,38 @@ export function DataAggregationPage() {
     return aggregationMockData
       .filter((msg) => {
         if (station !== 'all' && msg.station !== station) return false
+        if (keyEventOnly && !msg.blockchainRequired) return false
         const date = msg.receivedAt.slice(0, 10)
         if (date < dateStart || date > dateEnd) return false
         return true
       })
       .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
-  }, [station, dateStart, dateEnd])
+  }, [station, keyEventOnly, dateStart, dateEnd])
+
+  const keyEventCount = useMemo(
+    () => aggregationMockData.filter((msg) => msg.blockchainRequired).length,
+    [],
+  )
 
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">数据汇聚</h1>
+        <h1 className="page-title">{t('aggregation.title')}</h1>
+        <p className="export-page-desc">
+          {t('aggregation.desc', { count: keyEventCount })}
+        </p>
       </div>
 
       <div className="filter-bar">
         <div className="filter-field">
-          <label className="filter-label" htmlFor="agg-station">站点</label>
+          <label className="filter-label" htmlFor="agg-station">{t('aggregation.station')}</label>
           <div className="filter-select">
             <select
               id="agg-station"
               value={station}
               onChange={(e) => setStation(e.target.value)}
             >
-              <option value="all">全部站点</option>
+              <option value="all">{t('aggregation.allStations')}</option>
               {AGGREGATION_STATIONS.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
@@ -146,7 +300,19 @@ export function DataAggregationPage() {
         </div>
 
         <div className="filter-field">
-          <span className="filter-label">时间</span>
+          <span className="filter-label">{t('aggregation.event')}</span>
+          <select
+            className="sys-filter-select"
+            value={keyEventOnly ? 'key' : 'all'}
+            onChange={(e) => setKeyEventOnly(e.target.value === 'key')}
+          >
+            <option value="all">{t('aggregation.allMessages')}</option>
+            <option value="key">{t('aggregation.keyEventsOnly')}</option>
+          </select>
+        </div>
+
+        <div className="filter-field">
+          <span className="filter-label">{t('common.time')}</span>
           <div className="date-range">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -170,13 +336,13 @@ export function DataAggregationPage() {
           </div>
         </div>
 
-        <span className="agg-result-count">共 {messages.length} 条消息</span>
+        <span className="agg-result-count">{t('common.totalMessages', { count: messages.length })}</span>
       </div>
 
       <div className="agg-timeline-section">
         <div className="agg-timeline-wrapper">
           {messages.length === 0 ? (
-            <div className="agg-empty">当前筛选条件下暂无消息</div>
+            <div className="agg-empty">{t('aggregation.empty')}</div>
           ) : (
             <div className="agg-timeline">
               {messages.map((msg) => (

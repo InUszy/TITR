@@ -3,8 +3,24 @@ import { CreateTrackingDrawer } from '../components/CreateTrackingDrawer'
 import { DelayRiskPopover } from '../components/DelayRiskPopover'
 import { DocumentFilesModal } from '../components/DocumentFilesModal'
 import { FreightDetailPanel } from '../components/FreightDetailPanel'
+import { useLanguage, type Locale } from '../i18n/LanguageContext'
 import type { CustomsStatus, FreightRecord } from '../types/freight'
 import { downloadFreightRecords } from '../utils/downloadFreightRecords'
+
+const MONTH_NAMES_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function mapCustomsStatus(status: CustomsStatus, t: (key: string) => string) {
+  switch (status) {
+    case '已报关':
+      return t('freight.customs.done')
+    case '报关中':
+      return t('freight.customs.progress')
+    case '待报关':
+      return t('freight.customs.pending')
+    case '报关异常':
+      return t('freight.customs.error')
+  }
+}
 
 function LocationCell({ location }: { location: { flag: string; city: string } | null }) {
   if (!location) return <span className="empty-cell">-</span>
@@ -16,12 +32,15 @@ function LocationCell({ location }: { location: { flag: string; city: string } |
   )
 }
 
-function formatTimelineDate(dateStr: string) {
+function formatTimelineDate(dateStr: string, locale: Locale, monthSuffix: string) {
   const [datePart, timePart] = dateStr.split(' ')
-  const [, month, day] = datePart.split('-')
+  const [year, month, day] = datePart.split('-')
+  const label = locale === 'en'
+    ? `${MONTH_NAMES_EN[Number(month) - 1]} ${Number(day)}`
+    : `${Number(day)} ${Number(month)}${monthSuffix}`
   return {
-    label: `${Number(day)} ${Number(month)}月`,
-    year: datePart.slice(0, 4),
+    label,
+    year,
     time: timePart?.slice(0, 5) ?? '',
   }
 }
@@ -45,6 +64,8 @@ interface FreightTrackingPageProps {
 }
 
 export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrackingPageProps) {
+  const { t, locale } = useLanguage()
+
   const allRecords = useMemo(
     () => [...data].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -103,31 +124,31 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">货运追踪</h1>
+        <h1 className="page-title">{t('freight.title')}</h1>
       </div>
 
       <div className="filter-bar">
         <div className="filter-field">
-          <label className="filter-label" htmlFor="container-no">集装箱号</label>
+          <label className="filter-label" htmlFor="container-no">{t('freight.containerNo')}</label>
           <input
             id="container-no"
             type="text"
             className="filter-input"
-            placeholder="请输入集装箱号"
+            placeholder={t('freight.containerNoPlaceholder')}
             value={containerNo}
             onChange={(e) => setContainerNo(e.target.value)}
           />
         </div>
 
         <div className="filter-field">
-          <label className="filter-label" htmlFor="departure">出发</label>
+          <label className="filter-label" htmlFor="departure">{t('freight.departure')}</label>
           <div className="filter-select">
             <select
               id="departure"
               value={departure}
               onChange={(e) => setDeparture(e.target.value)}
             >
-              <option value="all">全部</option>
+              <option value="all">{t('common.all')}</option>
               {departureOptions.map((city) => (
                 <option key={city} value={city}>{city}</option>
               ))}
@@ -139,14 +160,14 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
         </div>
 
         <div className="filter-field">
-          <label className="filter-label" htmlFor="arrival">到达</label>
+          <label className="filter-label" htmlFor="arrival">{t('freight.arrival')}</label>
           <div className="filter-select">
             <select
               id="arrival"
               value={arrival}
               onChange={(e) => setArrival(e.target.value)}
             >
-              <option value="all">全部</option>
+              <option value="all">{t('common.all')}</option>
               {arrivalOptions.map((city) => (
                 <option key={city} value={city}>{city}</option>
               ))}
@@ -158,7 +179,7 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
         </div>
 
         <div className="filter-field">
-          <span className="filter-label">时间</span>
+          <span className="filter-label">{t('common.time')}</span>
           <div className="date-range">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -193,7 +214,7 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          下载运踪记录
+          {t('freight.downloadRecords')}
         </button>
       </div>
 
@@ -202,7 +223,7 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
           <div className="table-wrapper">
             <div className="freight-timeline">
               {records.map((row, index) => {
-                const { label, year, time } = formatTimelineDate(row.createdAt)
+                const { label, year, time } = formatTimelineDate(row.createdAt, locale, t('freight.monthSuffix'))
                 return (
                   <div
                     key={row.id}
@@ -225,41 +246,41 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
                       )}
                       <div className="timeline-grid">
                         <div className="timeline-row">
-                          <span className="timeline-label">集装箱</span>
+                          <span className="timeline-label">{t('freight.container')}</span>
                           <span className="timeline-value cell-container">{row.container}</span>
                         </div>
                         <div className="timeline-row">
-                          <span className="timeline-label">运单号</span>
+                          <span className="timeline-label">{t('freight.waybillNo')}</span>
                           <span className="timeline-value">{row.waybillNo}</span>
                         </div>
                         <div className="timeline-row">
-                          <span className="timeline-label">出发</span>
+                          <span className="timeline-label">{t('freight.departure')}</span>
                           <span className="timeline-value"><LocationCell location={row.departure} /></span>
                         </div>
                         <div className="timeline-row">
-                          <span className="timeline-label">到达</span>
+                          <span className="timeline-label">{t('freight.arrival')}</span>
                           <span className="timeline-value"><LocationCell location={row.arrival} /></span>
                         </div>
                         <div className="timeline-row">
-                          <span className="timeline-label">当前站点</span>
+                          <span className="timeline-label">{t('freight.currentStation')}</span>
                           <span className="timeline-value"><LocationCell location={row.currentStation} /></span>
                         </div>
                         <div className="timeline-row">
-                          <span className="timeline-label">状态</span>
+                          <span className="timeline-label">{t('freight.status')}</span>
                           <span className="timeline-value status-text">{row.status}</span>
                         </div>
                         <div className="timeline-row">
-                          <span className="timeline-label">报关状态</span>
+                          <span className="timeline-label">{t('freight.customsStatus')}</span>
                           <span className={`timeline-value customs-status ${customsStatusClass(row.customsStatus)}`}>
-                            {row.customsStatus}
+                            {mapCustomsStatus(row.customsStatus, t)}
                           </span>
                         </div>
                         <div className="timeline-row timeline-row-full">
-                          <span className="timeline-label">附件</span>
+                          <span className="timeline-label">{t('freight.attachments')}</span>
                           <span className="timeline-value timeline-files">
                             <span className="file-chip" title={row.ciplFile.name}>CIPL</span>
                             <span className="file-chip" title={row.smgsFile.name}>SMGS</span>
-                            <span className="file-chip" title={row.customsFile.name}>报关单</span>
+                            <span className="file-chip" title={row.customsFile.name}>{t('freight.customsDoc')}</span>
                             <button
                               type="button"
                               className="btn-view-files"
@@ -268,13 +289,13 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
                                 setFilesModalRecord(row)
                               }}
                             >
-                              展示
+                              {t('freight.show')}
                             </button>
                           </span>
                         </div>
                       </div>
                       <div className="timeline-actions">
-                        <button type="button" className="action-btn" aria-label="删除" onClick={(e) => e.stopPropagation()}>
+                        <button type="button" className="action-btn" aria-label={t('common.delete')} onClick={(e) => e.stopPropagation()}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -289,7 +310,7 @@ export function FreightTrackingPage({ data, showDelayRisk = false }: FreightTrac
           </div>
 
           <div className="add-row">
-            <button type="button" className="add-btn" aria-label="添加" onClick={() => setDrawerOpen(true)}>
+            <button type="button" className="add-btn" aria-label={t('common.add')} onClick={() => setDrawerOpen(true)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />

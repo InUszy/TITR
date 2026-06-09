@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useLanguage } from '../i18n/LanguageContext'
 import type { AuthUser } from '../types/auth'
 import {
   PROFILE_TABS,
@@ -8,6 +9,13 @@ import {
   getSwitchQueryHistory,
   type ProfileTab,
 } from '../types/profile'
+
+const TAB_I18N_KEYS: Record<ProfileTab, string> = {
+  company: 'profile.tabs.company',
+  documents: 'profile.tabs.documents',
+  apiHistory: 'profile.tabs.apiHistory',
+  switchHistory: 'profile.tabs.switchHistory',
+}
 
 function EditIcon() {
   return (
@@ -19,6 +27,7 @@ function EditIcon() {
 }
 
 function ProfileHeader({ user, profile }: { user: AuthUser; profile: ReturnType<typeof getProfileForUser> }) {
+  const { t } = useLanguage()
   const avatarLetter = profile.companyNameCn.charAt(0)
 
   return (
@@ -32,7 +41,7 @@ function ProfileHeader({ user, profile }: { user: AuthUser; profile: ReturnType<
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              已认证
+              {t('profile.verified')}
             </span>
           )}
         </div>
@@ -81,13 +90,14 @@ function FormField({
 }
 
 function CompanyInfoTab({ user }: { user: AuthUser }) {
+  const { t } = useLanguage()
   const profile = getProfileForUser(user)
 
   return (
     <div className="profile-tab-content">
       <section className="profile-section">
         <div className="profile-section-header">
-          <h2 className="profile-section-title">个人信息</h2>
+          <h2 className="profile-section-title">{t('profile.personalInfo')}</h2>
           <button type="button" className="profile-edit-btn" aria-label="编辑个人信息">
             <EditIcon />
           </button>
@@ -115,7 +125,7 @@ function CompanyInfoTab({ user }: { user: AuthUser }) {
 
       <section className="profile-section">
         <div className="profile-section-header">
-          <h2 className="profile-section-title">公司信息</h2>
+          <h2 className="profile-section-title">{t('profile.companyInfo')}</h2>
           <button type="button" className="profile-edit-btn" aria-label="编辑公司信息">
             <EditIcon />
           </button>
@@ -149,13 +159,14 @@ function CompanyInfoTab({ user }: { user: AuthUser }) {
 }
 
 function DocumentsTab({ user }: { user: AuthUser }) {
+  const { t } = useLanguage()
   const documents = getDocumentsForUser(user)
 
   return (
     <div className="profile-tab-content">
       <section className="profile-section">
         <div className="profile-section-header">
-          <h2 className="profile-section-title">公司文档</h2>
+          <h2 className="profile-section-title">{t('profile.companyDocs')}</h2>
         </div>
         <div className="profile-doc-list">
           {documents.map((doc) => (
@@ -163,11 +174,11 @@ function DocumentsTab({ user }: { user: AuthUser }) {
               <div className="profile-doc-info">
                 <span className="profile-doc-name">{doc.name}</span>
                 {doc.uploadedAt && (
-                  <span className="profile-doc-time">上传于 {doc.uploadedAt}</span>
+                  <span className="profile-doc-time">{t('profile.uploadedAt')} {doc.uploadedAt}</span>
                 )}
               </div>
               <span className={`profile-doc-status profile-doc-status-${doc.status === '已上传' ? 'done' : 'pending'}`}>
-                {doc.status}
+                {doc.status === '已上传' ? t('profile.uploaded') : t('profile.pending')}
               </span>
             </div>
           ))}
@@ -178,13 +189,14 @@ function DocumentsTab({ user }: { user: AuthUser }) {
 }
 
 function ApiHistoryTab() {
+  const { t } = useLanguage()
   const records = getApiHistory()
 
   return (
     <div className="profile-tab-content">
       <section className="profile-section">
         <div className="profile-section-header">
-          <h2 className="profile-section-title">API 通讯历史记录</h2>
+          <h2 className="profile-section-title">{t('profile.tabs.apiHistory')}</h2>
         </div>
         <div className="profile-table-wrapper">
           <table className="profile-table">
@@ -218,13 +230,14 @@ function ApiHistoryTab() {
 }
 
 function SwitchHistoryTab() {
+  const { t } = useLanguage()
   const records = getSwitchQueryHistory()
 
   return (
     <div className="profile-tab-content">
       <section className="profile-section">
         <div className="profile-section-header">
-          <h2 className="profile-section-title">交换机查询历史记录</h2>
+          <h2 className="profile-section-title">{t('profile.tabs.switchHistory')}</h2>
         </div>
         <div className="profile-table-wrapper">
           <table className="profile-table">
@@ -260,6 +273,7 @@ interface PersonalCenterPageProps {
 }
 
 export function PersonalCenterPage({ user }: PersonalCenterPageProps) {
+  const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState<ProfileTab>('company')
   const profile = getProfileForUser(user)
 
@@ -276,7 +290,7 @@ export function PersonalCenterPage({ user }: PersonalCenterPageProps) {
               className={`profile-tab ${activeTab === tab.id ? 'active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
             >
-              {tab.label}
+              {t(TAB_I18N_KEYS[tab.id])}
             </button>
           ))}
         </div>

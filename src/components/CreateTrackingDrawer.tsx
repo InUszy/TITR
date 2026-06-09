@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useLanguage } from '../i18n/LanguageContext'
 
 interface CreateTrackingDrawerProps {
   open: boolean
@@ -11,9 +12,11 @@ interface FileUploadFieldProps {
   file: File | null
   onChange: (file: File | null) => void
   accept?: string
+  deleteLabel: string
+  uploadHint: string
 }
 
-function FileUploadField({ label, file, onChange, accept }: FileUploadFieldProps) {
+function FileUploadField({ label, file, onChange, accept, deleteLabel, uploadHint }: FileUploadFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,7 +46,7 @@ function FileUploadField({ label, file, onChange, accept }: FileUploadFieldProps
             <span className="file-upload-size">{(file.size / 1024).toFixed(1)} KB</span>
           </div>
           <button type="button" className="file-upload-remove" onClick={handleRemove}>
-            删除
+            {deleteLabel}
           </button>
         </div>
       ) : (
@@ -57,7 +60,7 @@ function FileUploadField({ label, file, onChange, accept }: FileUploadFieldProps
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          <span>点击上传文件</span>
+          <span>{uploadHint}</span>
           <input
             ref={inputRef}
             type="file"
@@ -72,6 +75,7 @@ function FileUploadField({ label, file, onChange, accept }: FileUploadFieldProps
 }
 
 export function CreateTrackingDrawer({ open, stationOptions, onClose }: CreateTrackingDrawerProps) {
+  const { t } = useLanguage()
   const [departure, setDeparture] = useState('')
   const [arrival, setArrival] = useState('')
   const [containerNo, setContainerNo] = useState('')
@@ -90,24 +94,24 @@ export function CreateTrackingDrawer({ open, stationOptions, onClose }: CreateTr
     <div className="drawer-overlay" onClick={handleClose}>
       <aside className="drawer-panel" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-header">
-          <button type="button" className="drawer-close" onClick={handleClose} aria-label="关闭">
+          <button type="button" className="drawer-close" onClick={handleClose} aria-label={t('common.close')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
-          <h2 className="drawer-title">创建新的跟踪单</h2>
+          <h2 className="drawer-title">{t('createTracking.title')}</h2>
         </div>
 
         <div className="drawer-body">
           <div className="drawer-form-row">
             <div className="drawer-field">
               <label className="drawer-label">
-                <span className="required">*</span> 出发
+                <span className="required">*</span> {t('freight.departure')}
               </label>
               <div className="drawer-select">
                 <select value={departure} onChange={(e) => setDeparture(e.target.value)}>
-                  <option value="">从</option>
+                  <option value="">{t('createTracking.from')}</option>
                   {stationOptions.map((city) => (
                     <option key={city} value={city}>{city}</option>
                   ))}
@@ -120,11 +124,11 @@ export function CreateTrackingDrawer({ open, stationOptions, onClose }: CreateTr
 
             <div className="drawer-field">
               <label className="drawer-label">
-                <span className="required">*</span> 到达
+                <span className="required">*</span> {t('freight.arrival')}
               </label>
               <div className="drawer-select">
                 <select value={arrival} onChange={(e) => setArrival(e.target.value)}>
-                  <option value="">到</option>
+                  <option value="">{t('createTracking.to')}</option>
                   {stationOptions.map((city) => (
                     <option key={city} value={city}>{city}</option>
                   ))}
@@ -139,13 +143,13 @@ export function CreateTrackingDrawer({ open, stationOptions, onClose }: CreateTr
           <div className="tracking-form">
             <div className="drawer-field">
               <label className="drawer-label" htmlFor="drawer-container-no">
-                <span className="required">*</span> 集装箱号
+                <span className="required">*</span> {t('freight.containerNo')}
               </label>
               <input
                 id="drawer-container-no"
                 type="text"
                 className="drawer-input"
-                placeholder="请输入集装箱号"
+                placeholder={t('freight.containerNoPlaceholder')}
                 value={containerNo}
                 onChange={(e) => setContainerNo(e.target.value)}
               />
@@ -153,44 +157,50 @@ export function CreateTrackingDrawer({ open, stationOptions, onClose }: CreateTr
 
             <div className="drawer-field">
               <label className="drawer-label" htmlFor="drawer-smgs-no">
-                <span className="required">*</span> SMGS号
+                <span className="required">*</span> {t('createTracking.smgsNo')}
               </label>
               <input
                 id="drawer-smgs-no"
                 type="text"
                 className="drawer-input"
-                placeholder="请输入 SMGS 号"
+                placeholder={t('createTracking.smgsPlaceholder')}
                 value={smgsNo}
                 onChange={(e) => setSmgsNo(e.target.value)}
               />
             </div>
 
             <FileUploadField
-              label="CIPL 文件"
+              label={t('createTracking.ciplFile')}
               file={ciplFile}
               onChange={setCiplFile}
               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+              deleteLabel={t('common.delete')}
+              uploadHint={t('createTracking.uploadHint')}
             />
 
             <FileUploadField
-              label="SMGS 文件"
+              label={t('createTracking.smgsFile')}
               file={smgsFile}
               onChange={setSmgsFile}
               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+              deleteLabel={t('common.delete')}
+              uploadHint={t('createTracking.uploadHint')}
             />
 
             <FileUploadField
-              label="报关单文件"
+              label={t('createTracking.customsFile')}
               file={customsFile}
               onChange={setCustomsFile}
               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+              deleteLabel={t('common.delete')}
+              uploadHint={t('createTracking.uploadHint')}
             />
           </div>
         </div>
 
         <div className="drawer-footer">
-          <button type="button" className="btn-cancel" onClick={handleClose}>取消</button>
-          <button type="button" className="btn-submit">发送请求</button>
+          <button type="button" className="btn-cancel" onClick={handleClose}>{t('common.cancel')}</button>
+          <button type="button" className="btn-submit">{t('createTracking.send')}</button>
         </div>
       </aside>
     </div>

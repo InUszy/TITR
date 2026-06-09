@@ -9,6 +9,7 @@ import { FreightTrackingPage } from './pages/FreightTrackingPage'
 import { DictionaryManagementPage } from './pages/DictionaryManagementPage'
 import { LogManagementPage } from './pages/LogManagementPage'
 import { UserManagementPage } from './pages/UserManagementPage'
+import { CommandDashboardPage } from './pages/CommandDashboardPage'
 import { archivedMockData, mockData } from './types/freight'
 import {
   clearStoredUser,
@@ -56,6 +57,9 @@ function App() {
       }
       if (activePage === 'aggregation') {
         return <DataAggregationPage />
+      }
+      if (activePage === 'command') {
+        return <CommandDashboardPage />
       }
     }
 

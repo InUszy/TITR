@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { TablePagination } from '../components/TablePagination'
+import { useLanguage } from '../i18n/LanguageContext'
 import {
   EXPORT_COUNTRY_OPTIONS,
   EXPORT_DATA_TYPE_OPTIONS,
@@ -11,13 +12,18 @@ import {
   payloadFieldLabel,
   recordSortTime,
   storeDataExportEnabled,
-  syncStatusLabel,
   type DataExportRecord,
   type SyncData,
   type SyncStatus,
 } from '../types/dataExport'
 
 const PAGE_SIZE = 20
+
+const SYNC_STATUS_KEY: Record<SyncStatus, 'success' | 'syncing' | 'failed'> = {
+  success: 'success',
+  pending: 'syncing',
+  failed: 'failed',
+}
 
 interface DataExportPageProps {
   canControlExport?: boolean
@@ -32,12 +38,13 @@ function ExportMasterSwitch({
   canControl: boolean
   onChange: (enabled: boolean) => void
 }) {
+  const { t } = useLanguage()
   return (
     <div className={`export-master-switch ${enabled ? 'enabled' : 'disabled'}`}>
       <div className="export-master-switch-info">
-        <span className="export-master-switch-label">数据出境总开关</span>
+        <span className="export-master-switch-label">{t('dataExport.masterSwitch')}</span>
         <span className="export-master-switch-hint">
-          {enabled ? '允许向 TITR 境外平台同步数据' : '已暂停，国外主体请求将被拒绝'}
+          {enabled ? t('dataExport.allowSync') : t('dataExport.pausedHint')}
         </span>
       </div>
       <button
@@ -45,23 +52,24 @@ function ExportMasterSwitch({
         className={`export-switch ${enabled ? 'on' : 'off'}`}
         role="switch"
         aria-checked={enabled}
-        aria-label="数据出境总开关"
+        aria-label={t('dataExport.masterSwitch')}
         disabled={!canControl}
         onClick={() => onChange(!enabled)}
       >
         <span className="export-switch-thumb" />
       </button>
       {!canControl && (
-        <span className="export-master-switch-readonly">只读</span>
+        <span className="export-master-switch-readonly">{t('common.readonly')}</span>
       )}
     </div>
   )
 }
 
 function SyncStatusBadge({ status }: { status: SyncStatus }) {
+  const { t } = useLanguage()
   return (
     <span className={`export-status export-status-${status}`}>
-      {syncStatusLabel(status)}
+      {t(`dataExport.sync.${SYNC_STATUS_KEY[status]}`)}
     </span>
   )
 }
@@ -99,6 +107,7 @@ function ExportDetailModal({
   record: DataExportRecord
   onClose: () => void
 }) {
+  const { t } = useLanguage()
   const titrSyncPayload = JSON.stringify(
     {
       platform: 'TITR',
@@ -118,12 +127,12 @@ function ExportDetailModal({
       <div className="export-detail-modal" onClick={(e) => e.stopPropagation()}>
         <div className="file-modal-header">
           <div>
-            <h2 className="file-modal-title">数据出境同步详情</h2>
+            <h2 className="file-modal-title">{t('dataExport.detailTitle')}</h2>
             <p className="file-modal-subtitle">
               {record.id} · {formatSyncDataSummary(record.syncData)}
             </p>
           </div>
-          <button type="button" className="file-modal-close" onClick={onClose} aria-label="关闭">
+          <button type="button" className="file-modal-close" onClick={onClose} aria-label={t('common.close')}>
             ×
           </button>
         </div>
@@ -139,43 +148,43 @@ function ExportDetailModal({
 
           <div className="export-detail-summary">
             <div className="export-detail-summary-item">
-              <span className="export-detail-label">国外主体</span>
+              <span className="export-detail-label">{t('dataExport.foreignEntity')}</span>
               <ForeignEntityCell record={record} />
             </div>
             <div className="export-detail-summary-item">
-              <span className="export-detail-label">所属国家</span>
+              <span className="export-detail-label">{t('dataExport.homeCountry')}</span>
               <span>{record.countryFlag} {record.country}</span>
             </div>
             <div className="export-detail-summary-item">
-              <span className="export-detail-label">数据类型</span>
+              <span className="export-detail-label">{t('dataExport.dataType')}</span>
               <span className="export-type-badge">{record.dataType}</span>
             </div>
             <div className="export-detail-summary-item">
-              <span className="export-detail-label">请求编号</span>
+              <span className="export-detail-label">{t('dataExport.requestNo')}</span>
               <code className="export-request-id">{record.requestId}</code>
             </div>
             <div className="export-detail-summary-item">
-              <span className="export-detail-label">请求时间</span>
+              <span className="export-detail-label">{t('dataExport.requestTime')}</span>
               <span>{record.requestedAt}</span>
             </div>
             <div className="export-detail-summary-item">
-              <span className="export-detail-label">同步时间</span>
+              <span className="export-detail-label">{t('dataExport.syncTime')}</span>
               <span>{record.syncedAt ?? '—'}</span>
             </div>
           </div>
 
           <div className="export-detail-section">
-            <h3 className="export-detail-section-title">同步数据</h3>
+            <h3 className="export-detail-section-title">{t('dataExport.syncData')}</h3>
             <SyncDataPreview data={record.syncData} />
           </div>
 
           <div className="export-detail-section">
-            <h3 className="export-detail-section-title">国外主体请求报文</h3>
+            <h3 className="export-detail-section-title">{t('dataExport.requestPayload')}</h3>
             <pre className="export-request-payload">{record.requestPayload}</pre>
           </div>
 
           <div className="export-detail-section">
-            <h3 className="export-detail-section-title">同步至 TITR 报文</h3>
+            <h3 className="export-detail-section-title">{t('dataExport.syncPayload')}</h3>
             <pre className="export-request-payload export-titr-payload">{titrSyncPayload}</pre>
           </div>
         </div>
@@ -185,6 +194,7 @@ function ExportDetailModal({
 }
 
 export function DataExportPage({ canControlExport = false }: DataExportPageProps) {
+  const { t } = useLanguage()
   const [exportEnabled, setExportEnabled] = useState(() => loadDataExportEnabled())
   const [keyword, setKeyword] = useState('')
   const [country, setCountry] = useState('')
@@ -232,9 +242,9 @@ export function DataExportPage({ canControlExport = false }: DataExportPageProps
     <>
       <div className="page-header export-page-header">
         <div className="export-page-header-main">
-          <h1 className="page-title">数据出境</h1>
+          <h1 className="page-title">{t('dataExport.title')}</h1>
           <p className="export-page-desc">
-            展示国外主体主动请求后，向 {TITR_PLATFORM} 逐条同步的数据记录（按同步时间倒序）
+            {t('dataExport.desc')}
           </p>
         </div>
         <ExportMasterSwitch
@@ -246,7 +256,7 @@ export function DataExportPage({ canControlExport = false }: DataExportPageProps
 
       {!exportEnabled && (
         <div className="export-disabled-banner">
-          数据出境功能已关闭，向 {TITR_PLATFORM} 的数据同步已暂停，新的国外主体请求将不会被处理。
+          {t('dataExport.disabledBanner')}
         </div>
       )}
 
@@ -255,12 +265,12 @@ export function DataExportPage({ canControlExport = false }: DataExportPageProps
           <input
             type="text"
             className="user-mgmt-search-input"
-            placeholder="搜索国外主体、集装箱号、请求编号"
+            placeholder={t('dataExport.searchPlaceholder')}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
-          <button type="button" className="user-mgmt-search-btn" aria-label="搜索" onClick={handleSearch}>
+          <button type="button" className="user-mgmt-search-btn" aria-label={t('common.search')} onClick={handleSearch}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -270,46 +280,54 @@ export function DataExportPage({ canControlExport = false }: DataExportPageProps
 
         <div className="export-filters">
           <div className="filter-field">
-            <span className="filter-label">国家</span>
+            <span className="filter-label">{t('dataExport.country')}</span>
             <select
               className="sys-filter-select"
               value={country}
               onChange={(e) => { setCountry(e.target.value); setPage(1) }}
             >
               {EXPORT_COUNTRY_OPTIONS.map((opt) => (
-                <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+                <option key={opt.value || 'all'} value={opt.value}>
+                  {opt.value === '' ? t('dataExport.allCountries') : opt.label}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="filter-field">
-            <span className="filter-label">数据类型</span>
+            <span className="filter-label">{t('dataExport.dataType')}</span>
             <select
               className="sys-filter-select"
               value={dataType}
               onChange={(e) => { setDataType(e.target.value); setPage(1) }}
             >
               {EXPORT_DATA_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+                <option key={opt.value || 'all'} value={opt.value}>
+                  {opt.value === '' ? t('dataExport.allTypes') : opt.label}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="filter-field">
-            <span className="filter-label">同步状态</span>
+            <span className="filter-label">{t('dataExport.syncStatus')}</span>
             <select
               className="sys-filter-select"
               value={syncStatus}
               onChange={(e) => { setSyncStatus(e.target.value); setPage(1) }}
             >
               {EXPORT_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+                <option key={opt.value || 'all'} value={opt.value}>
+                  {opt.value === ''
+                    ? t('dataExport.allStatus')
+                    : t(`dataExport.sync.${SYNC_STATUS_KEY[opt.value as SyncStatus]}`)}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="filter-field">
-            <span className="filter-label">同步时间</span>
+            <span className="filter-label">{t('dataExport.syncTime')}</span>
             <div className="date-range">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -340,12 +358,12 @@ export function DataExportPage({ canControlExport = false }: DataExportPageProps
           <table className="user-mgmt-table export-table">
             <thead>
               <tr>
-                <th>同步时间</th>
-                <th>国外主体</th>
-                <th>数据类型</th>
-                <th>同步数据</th>
-                <th>同步状态</th>
-                <th>操作</th>
+                <th>{t('dataExport.syncTime')}</th>
+                <th>{t('dataExport.foreignEntity')}</th>
+                <th>{t('dataExport.dataType')}</th>
+                <th>{t('dataExport.syncData')}</th>
+                <th>{t('dataExport.syncStatus')}</th>
+                <th>{t('files.action')}</th>
               </tr>
             </thead>
             <tbody>
@@ -362,7 +380,7 @@ export function DataExportPage({ canControlExport = false }: DataExportPageProps
                       className="file-action-btn"
                       onClick={() => setDetailRecord(row)}
                     >
-                      查看详情
+                      {t('dataExport.viewDetail')}
                     </button>
                   </td>
                 </tr>

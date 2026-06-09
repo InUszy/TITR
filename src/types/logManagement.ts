@@ -33,7 +33,7 @@ export const logManagementMockData: SystemLog[] = [
   { id: 'LOG-20250608-002', timestamp: '2025-06-08 09:15:02', level: 'info', module: '货运追踪', operator: 'admin', action: '创建跟踪单', ip: '192.168.1.105', message: '创建跟踪单 TRK-20250608001，集装箱号 TBJU1234567', durationMs: 342 },
   { id: 'LOG-20250608-003', timestamp: '2025-06-08 09:22:18', level: 'info', module: '数据汇聚', operator: 'system', action: '接收消息', ip: '10.0.2.15', message: '霍尔果斯节点推送到达事件，消息 ID MSG-HRG-88421 已清洗入库', durationMs: 56 },
   { id: 'LOG-20250608-004', timestamp: '2025-06-08 09:35:47', level: 'warn', module: '数据汇聚', operator: 'system', action: '数据校验', ip: '10.0.2.18', message: '阿腾科里节点原始报文缺少 wagonNo 字段，已使用默认值填充', durationMs: 89 },
-  { id: 'LOG-20250608-005', timestamp: '2025-06-08 10:01:03', level: 'info', module: '用户管理', operator: 'admin', action: '审核用户', ip: '192.168.1.105', message: '审核通过用户 南京智德物流科技有限公司（ID: 3026614378390）', durationMs: 215 },
+  { id: 'LOG-20250608-005', timestamp: '2025-06-08 10:01:03', level: 'info', module: '用户管理', operator: 'admin', action: '审核用户', ip: '192.168.1.105', message: '审核通过用户 南京智捷物流科技有限公司（ID: 3026614378390）', durationMs: 215 },
   { id: 'LOG-20250608-006', timestamp: '2025-06-08 10:18:29', level: 'error', module: '数据汇聚', operator: 'system', action: '消息处理', ip: '10.0.2.22', message: '阿克套节点消息解析失败：JSON 格式错误，原始报文已存入异常队列', durationMs: 12 },
   { id: 'LOG-20250608-007', timestamp: '2025-06-08 10:45:11', level: 'info', module: '字典管理', operator: 'admin', action: '更新字典', ip: '192.168.1.105', message: '更新字典项 event_type/UNLOAD 状态为停用', durationMs: 178 },
   { id: 'LOG-20250608-008', timestamp: '2025-06-08 11:02:56', level: 'info', module: '系统登录', operator: 'user', action: '用户登录', ip: '192.168.1.208', message: '普通用户 user 登录成功', durationMs: 95 },

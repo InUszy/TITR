@@ -1,9 +1,9 @@
 import { Fragment, useMemo, useState } from 'react'
 import { TablePagination } from '../components/TablePagination'
+import { useLanguage } from '../i18n/LanguageContext'
 import {
   LOG_LEVEL_OPTIONS,
   LOG_MODULE_OPTIONS,
-  logLevelLabel,
   logManagementMockData,
   type LogLevel,
   type SystemLog,
@@ -12,14 +12,16 @@ import {
 const PAGE_SIZE = 20
 
 function LogLevelBadge({ level }: { level: LogLevel }) {
+  const { t } = useLanguage()
   return (
     <span className={`log-level log-level-${level}`}>
-      {logLevelLabel(level)}
+      {t(`logs.levelLabel.${level}`)}
     </span>
   )
 }
 
 export function LogManagementPage() {
+  const { t } = useLanguage()
   const [keyword, setKeyword] = useState('')
   const [level, setLevel] = useState('')
   const [module, setModule] = useState('')
@@ -60,7 +62,7 @@ export function LogManagementPage() {
   return (
     <>
       <div className="page-header user-mgmt-header">
-        <h1 className="page-title">日志管理</h1>
+        <h1 className="page-title">{t('logs.title')}</h1>
       </div>
 
       <div className="user-mgmt-toolbar log-mgmt-toolbar">
@@ -68,12 +70,12 @@ export function LogManagementPage() {
           <input
             type="text"
             className="user-mgmt-search-input"
-            placeholder="搜索操作人、操作、IP 或日志内容"
+            placeholder={t('logs.searchPlaceholder')}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
-          <button type="button" className="user-mgmt-search-btn" aria-label="搜索" onClick={handleSearch}>
+          <button type="button" className="user-mgmt-search-btn" aria-label={t('common.search')} onClick={handleSearch}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -83,7 +85,7 @@ export function LogManagementPage() {
 
         <div className="log-mgmt-filters">
           <div className="filter-field">
-            <span className="filter-label">级别</span>
+            <span className="filter-label">{t('logs.level')}</span>
             <select
               className="sys-filter-select"
               value={level}
@@ -93,13 +95,15 @@ export function LogManagementPage() {
               }}
             >
               {LOG_LEVEL_OPTIONS.map((opt) => (
-                <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+                <option key={opt.value || 'all'} value={opt.value}>
+                  {opt.value === '' ? t('logs.allLevels') : t(`logs.levelLabel.${opt.value}`)}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="filter-field">
-            <span className="filter-label">模块</span>
+            <span className="filter-label">{t('logs.module')}</span>
             <select
               className="sys-filter-select"
               value={module}
@@ -109,13 +113,15 @@ export function LogManagementPage() {
               }}
             >
               {LOG_MODULE_OPTIONS.map((opt) => (
-                <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+                <option key={opt.value || 'all'} value={opt.value}>
+                  {opt.value === '' ? t('logs.allModules') : opt.label}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="filter-field user-mgmt-date-filter">
-            <span className="filter-label">时间范围</span>
+            <span className="filter-label">{t('logs.timeRange')}</span>
             <div className="date-range">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -152,14 +158,14 @@ export function LogManagementPage() {
           <table className="user-mgmt-table log-mgmt-table">
             <thead>
               <tr>
-                <th>时间</th>
-                <th>级别</th>
-                <th>模块</th>
-                <th>操作人</th>
-                <th>操作</th>
-                <th>IP 地址</th>
-                <th>耗时</th>
-                <th>详情</th>
+                <th>{t('logs.time')}</th>
+                <th>{t('logs.level')}</th>
+                <th>{t('logs.module')}</th>
+                <th>{t('logs.operator')}</th>
+                <th>{t('logs.action')}</th>
+                <th>{t('logs.ip')}</th>
+                <th>{t('logs.duration')}</th>
+                <th>{t('logs.detail')}</th>
               </tr>
             </thead>
             <tbody>
@@ -181,7 +187,7 @@ export function LogManagementPage() {
                         className="log-detail-btn"
                         onClick={() => toggleExpand(row.id)}
                       >
-                        {expandedId === row.id ? '收起' : '查看'}
+                        {expandedId === row.id ? t('logs.collapse') : t('logs.view')}
                       </button>
                     </td>
                   </tr>
@@ -189,7 +195,7 @@ export function LogManagementPage() {
                     <tr className="log-detail-row">
                       <td colSpan={8}>
                         <div className="log-detail-panel">
-                          <span className="log-detail-id">日志 ID：{row.id}</span>
+                          <span className="log-detail-id">{t('logs.logId')}{row.id}</span>
                           <p className="log-detail-message">{row.message}</p>
                         </div>
                       </td>

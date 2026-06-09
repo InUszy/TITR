@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext'
 import type { CustomsStatus, TrackingFile } from '../types/freight'
 
 interface DocumentFilesModalProps {
@@ -156,6 +157,7 @@ function FilePreviewPane({
   smgsNo,
   customsStatus,
   file,
+  downloadLabel,
 }: {
   label: string
   container: string
@@ -163,6 +165,7 @@ function FilePreviewPane({
   smgsNo: string
   customsStatus: CustomsStatus
   file: TrackingFile
+  downloadLabel: string
 }) {
   const previewHtml = buildPreviewHtml(label, container, waybillNo, smgsNo, customsStatus, file)
 
@@ -189,7 +192,7 @@ function FilePreviewPane({
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          下载
+          {downloadLabel}
         </button>
       </div>
     </div>
@@ -207,19 +210,22 @@ export function DocumentFilesModal({
   customsFile,
   onClose,
 }: DocumentFilesModalProps) {
+  const { t } = useLanguage()
+
   if (!open) return null
 
   const paneProps = { container, waybillNo, smgsNo, customsStatus }
+  const downloadLabel = t('documentModal.download')
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel modal-panel-lg modal-panel-xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h2 className="modal-title">运踪附件</h2>
-            <p className="modal-subtitle">集装箱 {container} · 运单号 {waybillNo}</p>
+            <h2 className="modal-title">{t('documentModal.title')}</h2>
+            <p className="modal-subtitle">{t('freight.container')} {container} · {t('freight.waybillNo')} {waybillNo}</p>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="关闭">
+          <button type="button" className="modal-close" onClick={onClose} aria-label={t('common.close')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -228,9 +234,9 @@ export function DocumentFilesModal({
         </div>
 
         <div className="modal-body modal-body-preview modal-body-preview-3">
-          <FilePreviewPane label="CIPL" file={ciplFile} {...paneProps} />
-          <FilePreviewPane label="SMGS" file={smgsFile} {...paneProps} />
-          <FilePreviewPane label="报关单" file={customsFile} {...paneProps} />
+          <FilePreviewPane label="CIPL" file={ciplFile} downloadLabel={downloadLabel} {...paneProps} />
+          <FilePreviewPane label="SMGS" file={smgsFile} downloadLabel={downloadLabel} {...paneProps} />
+          <FilePreviewPane label={t('freight.customsDoc')} file={customsFile} downloadLabel={downloadLabel} {...paneProps} />
         </div>
       </div>
     </div>

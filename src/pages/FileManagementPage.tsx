@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { TablePagination } from '../components/TablePagination'
+import { useLanguage } from '../i18n/LanguageContext'
 import {
   BLOCKCHAIN_STATUS_OPTIONS,
   FILE_CATEGORY_OPTIONS,
-  blockchainStatusLabel,
   formatFileSize,
   systemFileRecords,
   truncateHash,
@@ -14,6 +14,12 @@ import {
 
 const PAGE_SIZE = 20
 
+const FILE_CERT_KEY: Record<BlockchainStatus, 'certified' | 'certifying' | 'none'> = {
+  notarized: 'certified',
+  pending: 'certifying',
+  none: 'none',
+}
+
 function FileTypeBadge({ record }: { record: SystemFileRecord }) {
   return (
     <span className={`file-type-badge file-type-${record.category}`}>
@@ -23,12 +29,13 @@ function FileTypeBadge({ record }: { record: SystemFileRecord }) {
 }
 
 function BlockchainStatusBadge({ status }: { status: BlockchainStatus }) {
+  const { t } = useLanguage()
   if (status === 'none') {
     return <span className="chain-status chain-status-none">—</span>
   }
   return (
     <span className={`chain-status chain-status-${status}`}>
-      {blockchainStatusLabel(status)}
+      {t(`files.cert.${FILE_CERT_KEY[status]}`)}
     </span>
   )
 }
@@ -69,6 +76,7 @@ function BlockchainDetailModal({
   file: SystemFileRecord
   onClose: () => void
 }) {
+  const { t } = useLanguage()
   const chain = file.blockchain as BlockchainRecord
 
   return (
@@ -76,10 +84,10 @@ function BlockchainDetailModal({
       <div className="file-modal" onClick={(e) => e.stopPropagation()}>
         <div className="file-modal-header">
           <div>
-            <h2 className="file-modal-title">区块链存证信息</h2>
+            <h2 className="file-modal-title">{t('files.modalTitle')}</h2>
             <p className="file-modal-subtitle">{file.name}</p>
           </div>
-          <button type="button" className="file-modal-close" onClick={onClose} aria-label="关闭">
+          <button type="button" className="file-modal-close" onClick={onClose} aria-label={t('common.close')}>
             ×
           </button>
         </div>
@@ -96,41 +104,41 @@ function BlockchainDetailModal({
 
           <dl className="chain-info-grid">
             <div className="chain-info-item">
-              <dt>交易哈希</dt>
+              <dt>{t('blockchain.txHash')}</dt>
               <dd><code title={chain.txHash}>{chain.txHash}</code></dd>
             </div>
             <div className="chain-info-item">
-              <dt>数据哈希</dt>
+              <dt>{t('blockchain.dataHash')}</dt>
               <dd><code title={chain.dataHash}>{chain.dataHash}</code></dd>
             </div>
             <div className="chain-info-item">
-              <dt>区块高度</dt>
+              <dt>{t('blockchain.blockHeight')}</dt>
               <dd>{chain.blockHeight.toLocaleString()}</dd>
             </div>
             <div className="chain-info-item">
-              <dt>区块时间</dt>
+              <dt>{t('blockchain.blockTime')}</dt>
               <dd>{chain.blockTime}</dd>
             </div>
             <div className="chain-info-item">
-              <dt>存证时间</dt>
+              <dt>{t('blockchain.certTime')}</dt>
               <dd>{chain.notarizedAt}</dd>
             </div>
             <div className="chain-info-item">
-              <dt>确认数</dt>
+              <dt>{t('blockchain.confirmations')}</dt>
               <dd>{chain.confirmations}</dd>
             </div>
             <div className="chain-info-item chain-info-item-full">
-              <dt>智能合约地址</dt>
+              <dt>{t('blockchain.contract')}</dt>
               <dd><code title={chain.contractAddress}>{chain.contractAddress}</code></dd>
             </div>
             <div className="chain-info-item chain-info-item-full">
-              <dt>存证节点</dt>
+              <dt>{t('blockchain.node')}</dt>
               <dd>{chain.verifier}</dd>
             </div>
           </dl>
 
           <div className="chain-verify-note">
-            文件哈希已上链存证，可通过交易哈希在 DTC 区块链浏览器中核验文件完整性与存证时间。
+            {t('files.certDesc')}
           </div>
         </div>
       </div>
@@ -139,6 +147,7 @@ function BlockchainDetailModal({
 }
 
 export function FileManagementPage() {
+  const { t } = useLanguage()
   const [keyword, setKeyword] = useState('')
   const [category, setCategory] = useState('')
   const [chainStatus, setChainStatus] = useState('')
@@ -175,7 +184,7 @@ export function FileManagementPage() {
   return (
     <>
       <div className="page-header user-mgmt-header">
-        <h1 className="page-title">文件管理</h1>
+        <h1 className="page-title">{t('files.title')}</h1>
       </div>
 
       <div className="user-mgmt-toolbar file-mgmt-toolbar">
@@ -183,12 +192,12 @@ export function FileManagementPage() {
           <input
             type="text"
             className="user-mgmt-search-input"
-            placeholder="搜索文件名、所属主体、集装箱号或运单号"
+            placeholder={t('files.searchPlaceholder')}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
-          <button type="button" className="user-mgmt-search-btn" aria-label="搜索" onClick={handleSearch}>
+          <button type="button" className="user-mgmt-search-btn" aria-label={t('common.search')} onClick={handleSearch}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -198,7 +207,7 @@ export function FileManagementPage() {
 
         <div className="file-mgmt-filters">
           <div className="filter-field">
-            <span className="filter-label">文件类型</span>
+            <span className="filter-label">{t('files.fileType')}</span>
             <select
               className="sys-filter-select"
               value={category}
@@ -208,13 +217,15 @@ export function FileManagementPage() {
               }}
             >
               {FILE_CATEGORY_OPTIONS.map((opt) => (
-                <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+                <option key={opt.value || 'all'} value={opt.value}>
+                  {opt.value === '' ? t('files.allTypes') : opt.label}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="filter-field">
-            <span className="filter-label">存证状态</span>
+            <span className="filter-label">{t('files.certStatus')}</span>
             <select
               className="sys-filter-select"
               value={chainStatus}
@@ -224,12 +235,16 @@ export function FileManagementPage() {
               }}
             >
               {BLOCKCHAIN_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value || 'all'} value={opt.value}>{opt.label}</option>
+                <option key={opt.value || 'all'} value={opt.value}>
+                  {opt.value === ''
+                    ? t('files.allCertStatus')
+                    : t(`files.cert.${FILE_CERT_KEY[opt.value as BlockchainStatus]}`)}
+                </option>
               ))}
             </select>
           </div>
 
-          <span className="file-mgmt-count">共 {filtered.length} 个文件</span>
+          <span className="file-mgmt-count">{t('common.totalFiles', { count: filtered.length })}</span>
         </div>
       </div>
 
@@ -238,14 +253,14 @@ export function FileManagementPage() {
           <table className="user-mgmt-table file-mgmt-table">
             <thead>
               <tr>
-                <th>文件</th>
-                <th>类型</th>
-                <th>所属主体</th>
-                <th>关联信息</th>
-                <th>大小</th>
-                <th>上传时间</th>
-                <th>区块链存证</th>
-                <th>操作</th>
+                <th>{t('files.file')}</th>
+                <th>{t('files.type')}</th>
+                <th>{t('files.owner')}</th>
+                <th>{t('files.related')}</th>
+                <th>{t('files.size')}</th>
+                <th>{t('files.uploadedAt')}</th>
+                <th>{t('files.blockchain')}</th>
+                <th>{t('files.action')}</th>
               </tr>
             </thead>
             <tbody>
@@ -257,8 +272,8 @@ export function FileManagementPage() {
                   <td className="cell-muted">
                     {row.relatedContainer ? (
                       <div className="file-related-info">
-                        <span>集装箱：{row.relatedContainer}</span>
-                        {row.relatedWaybill && <span>运单：{row.relatedWaybill}</span>}
+                        <span>{t('files.container')}{row.relatedContainer}</span>
+                        {row.relatedWaybill && <span>{t('files.waybill')}{row.relatedWaybill}</span>}
                       </div>
                     ) : '—'}
                   </td>
@@ -275,7 +290,7 @@ export function FileManagementPage() {
                         )}
                       </div>
                     ) : (
-                      <span className="cell-muted">不适用</span>
+                      <span className="cell-muted">{t('common.notApplicable')}</span>
                     )}
                   </td>
                   <td>
@@ -286,7 +301,7 @@ export function FileManagementPage() {
                           className="file-action-btn"
                           onClick={() => setDetailFile(row)}
                         >
-                          链上信息
+                          {t('files.chainInfo')}
                         </button>
                       )}
                       {row.blockchainRequired && row.blockchainStatus === 'pending' && (
@@ -295,7 +310,7 @@ export function FileManagementPage() {
                           className="file-action-btn"
                           onClick={() => setDetailFile(row)}
                         >
-                          查看进度
+                          {t('files.viewProgress')}
                         </button>
                       )}
                       {row.blockchainRequired && row.blockchainStatus === 'none' && (
@@ -305,7 +320,7 @@ export function FileManagementPage() {
                           disabled={notifyingId === row.id}
                           onClick={() => handleNotarize(row)}
                         >
-                          {notifyingId === row.id ? '存证中...' : '发起存证'}
+                          {notifyingId === row.id ? t('files.certifying') : t('files.startCert')}
                         </button>
                       )}
                     </div>

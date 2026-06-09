@@ -7,6 +7,35 @@
   background:
     radial-gradient(circle at top right, rgba(90, 173, 74, 0.12), transparent 40%),
     var(--bg-page);
+  position: relative;
+}
+
+.login-lang-switch {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  display: flex;
+  gap: 4px;
+  background: var(--bg-white);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.login-lang-switch button {
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.login-lang-switch button.active {
+  background: rgba(90, 173, 74, 0.12);
+  color: var(--primary-dark);
+  font-weight: 500;
 }
 
 .login-card {

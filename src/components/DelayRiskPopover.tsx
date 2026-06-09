@@ -1,22 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useLanguage } from '../i18n/LanguageContext'
 import type { DelayRisk, DelayRiskLevel } from '../types/freight'
 
 interface DelayRiskPopoverProps {
   risk: DelayRisk
-}
-
-function riskLevelLabel(level: DelayRiskLevel) {
-  switch (level) {
-    case 'None':
-      return '无'
-    case 'Low':
-      return '低'
-    case 'Medium':
-      return '中'
-    case 'High':
-      return '高'
-  }
 }
 
 function riskLevelClass(level: DelayRiskLevel) {
@@ -32,14 +20,25 @@ function riskLevelClass(level: DelayRiskLevel) {
   }
 }
 
+const RISK_LEVEL_KEYS: Record<DelayRiskLevel, string> = {
+  None: 'command.riskLevel.none',
+  Low: 'command.riskLevel.low',
+  Medium: 'command.riskLevel.medium',
+  High: 'command.riskLevel.high',
+}
+
 const POPOVER_WIDTH = 380
 const POPOVER_GAP = 6
 
 export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState({ top: 0, left: 0, placement: 'bottom' as 'bottom' | 'top' })
   const anchorRef = useRef<HTMLDivElement>(null)
   const closeTimerRef = useRef<number | null>(null)
+
+  const riskLevelLabel = t(RISK_LEVEL_KEYS[risk.level])
+  const riskTitle = `${t('delayRisk.title')}: ${riskLevelLabel}`
 
   const updatePosition = () => {
     const anchor = anchorRef.current
@@ -100,7 +99,7 @@ export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
       <button
         type="button"
         className={`delay-risk-trigger ${riskLevelClass(risk.level)}`}
-        aria-label={`延迟风险：${riskLevelLabel(risk.level)}`}
+        aria-label={riskTitle}
         aria-expanded={open}
         onClick={(e) => {
           e.stopPropagation()
@@ -117,7 +116,7 @@ export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
             <path d="M12 6v6l4 2" />
           </svg>
         </span>
-        延迟风险: {riskLevelLabel(risk.level)}
+        {riskTitle}
         <svg
           className={`delay-risk-chevron ${open ? 'open' : ''}`}
           width="12"
@@ -147,13 +146,13 @@ export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
               </svg>
             </span>
             <span className="delay-risk-popover-title">
-              延迟风险: {riskLevelLabel(risk.level)}
+              {riskTitle}
             </span>
           </div>
 
           <div className="delay-risk-grid">
             <div className="delay-risk-cell">
-              <span className="delay-risk-label">路线</span>
+              <span className="delay-risk-label">{t('delayRisk.route')}</span>
               <span className="delay-risk-value">
                 {risk.routeFrom}
                 <span className="delay-risk-arrow">→</span>
@@ -161,7 +160,7 @@ export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
               </span>
             </div>
             <div className="delay-risk-cell">
-              <span className="delay-risk-label">状态</span>
+              <span className="delay-risk-label">{t('delayRisk.status')}</span>
               <span className="delay-risk-value">{risk.statusMessage}</span>
             </div>
             <div className="delay-risk-cell">
@@ -172,7 +171,7 @@ export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
                   <line x1="8" y1="2" x2="8" y2="6" />
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
-                预计运输时间
+                {t('delayRisk.estimatedTime')}
               </span>
               <span className="delay-risk-value">{risk.expectedTransitTime}</span>
             </div>
@@ -184,7 +183,7 @@ export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
                   <line x1="8" y1="2" x2="8" y2="6" />
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
-                下一站 ETA
+                {t('delayRisk.nextEta')}
               </span>
               <span className="delay-risk-value">{risk.etaToNextStation}</span>
             </div>
@@ -194,7 +193,7 @@ export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <polyline points="14 2 14 8 20 8" />
                 </svg>
-                实际用时
+                {t('delayRisk.actualTime')}
               </span>
               <span className="delay-risk-value">{risk.actualTime}</span>
             </div>
@@ -204,7 +203,7 @@ export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                预计延迟
+                {t('delayRisk.estimatedDelay')}
               </span>
               <span className={`delay-risk-value delay-risk-delay ${riskLevelClass(risk.level)}`}>
                 {risk.expectedDelay}
@@ -221,9 +220,9 @@ export function DelayRiskPopover({ risk }: DelayRiskPopoverProps) {
               </svg>
             </span>
             <div>
-              <p className="delay-risk-about-title">关于此结果</p>
+              <p className="delay-risk-about-title">{t('delayRisk.about')}</p>
               <p className="delay-risk-about-text">
-                该结果基于 AI 对该路线历史运踪数据的分析预测。
+                {t('delayRisk.desc')}
               </p>
             </div>
           </div>

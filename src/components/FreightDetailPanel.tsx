@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext'
 import type { FreightRecord } from '../types/freight'
 import { downloadTrackingHistory } from '../utils/downloadTrackingHistory'
 import { DetailRouteMap } from './DetailRouteMap'
@@ -8,6 +9,7 @@ interface FreightDetailPanelProps {
 }
 
 export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
+  const { t } = useLanguage()
   const detail = record.detail
 
   return (
@@ -24,23 +26,23 @@ export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
           <div className="map-legend">
             <span className="map-legend-item">
               <span className="map-legend-line passed" />
-              已通过
+              {t('freightDetail.passed')}
             </span>
             <span className="map-legend-item">
               <span className="map-legend-line upcoming" />
-              未经过
+              {t('freightDetail.notPassed')}
             </span>
-            <span className="map-legend-item">🚂 铁路场站</span>
-            <span className="map-legend-item">⚓ 港口</span>
+            <span className="map-legend-item">{t('freightDetail.railStation')}</span>
+            <span className="map-legend-item">{t('freightDetail.port')}</span>
           </div>
 
           <div className="map-zoom">
-            <button type="button" aria-label="放大">+</button>
-            <button type="button" aria-label="缩小">−</button>
+            <button type="button" aria-label={t('freightDetail.zoomIn')}>+</button>
+            <button type="button" aria-label={t('freightDetail.zoomOut')}>−</button>
           </div>
         </div>
 
-        <div className="map-container-label">集装箱 - {record.container}</div>
+        <div className="map-container-label">{t('freight.container')} - {record.container}</div>
 
         <MapStationTooltip
           container={record.container}
@@ -52,7 +54,7 @@ export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
 
       <div className="detail-cards">
         <div className="detail-card status-card">
-          <button type="button" className="card-collapse" aria-label="折叠">
+          <button type="button" className="card-collapse" aria-label={t('freightDetail.fold')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="6 9 12 15 18 9" />
             </svg>
@@ -70,7 +72,7 @@ export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
                 <span className="progress-icon progress-current" style={{ left: `${detail.progressPercent}%` }}>🚂</span>
                 <span className="progress-icon progress-end">🏁</span>
               </div>
-              <span className="progress-label">已过 {detail.distancePassed} 千米</span>
+              <span className="progress-label">{t('freightDetail.passedKm', { km: detail.distancePassed })}</span>
             </div>
             <div className="route-point">
               <span className="flag">{detail.destination.flag}</span>
@@ -80,36 +82,36 @@ export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
 
           <div className="status-grid">
             <div className="status-item">
-              <span className="status-label">当前国家</span>
+              <span className="status-label">{t('freightDetail.currentCountry')}</span>
               <span className="status-value">
                 <span className="flag">{detail.currentCountry.flag}</span>
                 {detail.currentCountry.name}
               </span>
             </div>
             <div className="status-item">
-              <span className="status-label">当前站点</span>
+              <span className="status-label">{t('freightDetail.currentStation')}</span>
               <span className="status-value">{detail.currentStationName}</span>
             </div>
             <div className="status-item">
-              <span className="status-label">状态</span>
+              <span className="status-label">{t('freight.status')}</span>
               <span className="status-value status-highlight">{record.status}</span>
             </div>
             <div className="status-item">
-              <span className="status-label">车厢号</span>
+              <span className="status-label">{t('freightDetail.wagonNo')}</span>
               <span className="status-value">{record.carriageNo}</span>
             </div>
           </div>
         </div>
 
         <div className="detail-card history-card">
-          <button type="button" className="card-collapse card-collapse-bottom" aria-label="折叠">
+          <button type="button" className="card-collapse card-collapse-bottom" aria-label={t('freightDetail.fold')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
 
           <div className="history-header">
-            <h3 className="history-title">跟踪历史</h3>
+            <h3 className="history-title">{t('freightDetail.trackHistory')}</h3>
             <button
               type="button"
               className="history-download-btn"
@@ -121,7 +123,7 @@ export function FreightDetailPanel({ record }: FreightDetailPanelProps) {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              下载
+              {t('common.download')}
             </button>
           </div>
 

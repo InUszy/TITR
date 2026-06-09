@@ -10,6 +10,21 @@ export const AGGREGATION_STATIONS = [
 
 export type AggregationStation = (typeof AGGREGATION_STATIONS)[number]
 
+export type AggregationBlockchainStatus = 'notarized' | 'pending' | 'none'
+
+export interface AggregationBlockchain {
+  chainName: string
+  network: string
+  txHash: string
+  blockHeight: number
+  blockTime: string
+  dataHash: string
+  contractAddress: string
+  notarizedAt: string
+  verifier: string
+  confirmations: number
+}
+
 export interface AggregationStructuredData {
   containerNo?: string
   waybillNo?: string
@@ -29,9 +44,100 @@ export interface AggregationMessage {
   sourceSystem: string
   structured: AggregationStructuredData
   rawData: string
+  blockchainRequired: boolean
+  blockchainStatus: AggregationBlockchainStatus
+  blockchain?: AggregationBlockchain
 }
 
-export const aggregationMockData: AggregationMessage[] = [
+/** 通关、放行、交接等关键事件需上链存证 */
+export const KEY_AGGREGATION_EVENT_KEYWORDS = [
+  '通关',
+  '放行',
+  '交接',
+  '清关',
+  '海关',
+  '跨境',
+  '过境',
+] as const
+
+export function isKeyAggregationEvent(eventType: string) {
+  return KEY_AGGREGATION_EVENT_KEYWORDS.some((kw) => eventType.includes(kw))
+}
+
+function hashSeed(input: string) {
+  let hash = 0
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+function mockDataHash(seed: string) {
+  const base = hashSeed(seed).toString(16).padStart(8, '0')
+  return `0x${base.repeat(8).slice(0, 64)}`
+}
+
+function mockTxHash(seed: string) {
+  const base = hashSeed(`${seed}-tx`).toString(16).padStart(8, '0')
+  return `0x${base.repeat(8).slice(0, 64)}`
+}
+
+function buildAggregationBlockchain(messageId: number, receivedAt: string): AggregationBlockchain {
+  const seed = `agg-${messageId}`
+  return {
+    chainName: '长安链 DTC 存证链',
+    network: 'DTC-Mainnet',
+    txHash: mockTxHash(seed),
+    blockHeight: 18_420_000 + (hashSeed(seed) % 50_000),
+    blockTime: receivedAt,
+    dataHash: mockDataHash(seed),
+    contractAddress: '0xDTC7a3f8e2b1c9045d6e7f8091a2b3c4d5e6f7089',
+    notarizedAt: receivedAt,
+    verifier: 'DTC 区块链存证节点-01',
+    confirmations: 12 + (hashSeed(seed) % 48),
+  }
+}
+
+type RawAggregationMessage = Omit<AggregationMessage, 'blockchainRequired' | 'blockchainStatus' | 'blockchain'>
+
+const KEY_EVENT_BLOCKCHAIN_STATUS: Record<number, AggregationBlockchainStatus> = {
+  2: 'pending',
+  6: 'notarized',
+  7: 'notarized',
+}
+
+function enrichAggregationMessage(msg: RawAggregationMessage): AggregationMessage {
+  const keyEvent = isKeyAggregationEvent(msg.structured.eventType)
+  if (!keyEvent) {
+    return { ...msg, blockchainRequired: false, blockchainStatus: 'none' }
+  }
+  const status = KEY_EVENT_BLOCKCHAIN_STATUS[msg.id] ?? 'notarized'
+  return {
+    ...msg,
+    blockchainRequired: true,
+    blockchainStatus: status,
+    blockchain: status !== 'none' ? buildAggregationBlockchain(msg.id, msg.receivedAt) : undefined,
+  }
+}
+
+export function aggregationBlockchainStatusLabel(status: AggregationBlockchainStatus) {
+  switch (status) {
+    case 'notarized':
+      return '已存证'
+    case 'pending':
+      return '存证中'
+    case 'none':
+      return '未存证'
+  }
+}
+
+export function truncateAggHash(hash: string, head = 10, tail = 8) {
+  if (hash.length <= head + tail + 3) return hash
+  return `${hash.slice(0, head)}...${hash.slice(-tail)}`
+}
+
+const rawAggregationMockData: RawAggregationMessage[] = [
   {
     id: 1,
     station: '西安',
@@ -67,11 +173,11 @@ export const aggregationMockData: AggregationMessage[] = [
     structured: {
       containerNo: 'CICU1023456',
       waybillNo: 'WB-2026-052402',
-      eventType: '海关查验',
+      eventType: '通关查验',
       location: '霍尔果斯口岸',
       status: '查验中',
       customsStatus: '待放行',
-      remark: '单证审核中',
+      remark: '关键节点：海关通关环节',
     },
     rawData: JSON.stringify({
       header: { version: '2.1', node: 'KHORGOS' },
@@ -162,6 +268,7 @@ export const aggregationMockData: AggregationMessage[] = [
       location: '波季港',
       status: '已放行',
       customsStatus: '已清关',
+      remark: '关键节点：清关放行',
     },
     rawData: `CONTAINER=HLXU5567890|EVENT=GATE_OUT|PORT=POTI|STATUS=CLEARED|TIME=20260521194856`,
   },
@@ -173,10 +280,11 @@ export const aggregationMockData: AggregationMessage[] = [
     structured: {
       containerNo: 'TCLU2048193',
       waybillNo: 'WB-2025-011502',
-      eventType: '跨境接入',
+      eventType: '跨境交接',
       location: '卡尔斯铁路枢纽',
-      status: '已接入',
+      status: '已交接',
       trainNo: 'TR-KARS-118',
+      remark: '关键节点：跨境货物交接',
     },
     rawData: JSON.stringify({
       node: 'KARS',
@@ -280,3 +388,5 @@ export const aggregationMockData: AggregationMessage[] = [
     rawData: `{"vessel":"MV CASPIAN EXPRESS","containers":["CICU1023456"],"eta":"2026-05-18T06:00:00Z"}`,
   },
 ]
+
+export const aggregationMockData: AggregationMessage[] = rawAggregationMockData.map(enrichAggregationMessage)

@@ -1,10 +1,13 @@
+import { useEffect, useRef, useState } from 'react'
 import logoImg from '../assets/logo.png'
 
+import { useLanguage } from '../i18n/LanguageContext'
+import type { Locale } from '../i18n/LanguageContext'
 import type { AuthUser } from '../types/auth'
 
 
 
-export type AppPage = 'users' | 'freight' | 'aggregation' | 'dataExport' | 'dictionaries' | 'logs' | 'files' | 'profile'
+export type AppPage = 'users' | 'freight' | 'aggregation' | 'dataExport' | 'dictionaries' | 'logs' | 'files' | 'profile' | 'command'
 
 export type TrackingView = 'regular' | 'archived'
 
@@ -130,6 +133,22 @@ const icons = {
 
   ),
 
+  command: (
+
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+
+      <line x1="8" y1="21" x2="16" y2="21" />
+
+      <line x1="12" y1="17" x2="12" y2="21" />
+
+      <polyline points="7 10 10 13 17 7" />
+
+    </svg>
+
+  ),
+
 }
 
 
@@ -168,6 +187,21 @@ export function Sidebar({
 
 }: SidebarProps) {
 
+  const { t, locale, setLocale } = useLanguage()
+  const [langOpen, setLangOpen] = useState(false)
+  const langSwitcherRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!langOpen) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (langSwitcherRef.current && !langSwitcherRef.current.contains(event.target as Node)) {
+        setLangOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [langOpen])
+
   const isAdmin = user.role === 'admin'
   const avatarLetter = user.displayName.charAt(0).toUpperCase()
 
@@ -195,11 +229,20 @@ export function Sidebar({
           <>
             <button
               type="button"
+              className={`nav-item ${activePage === 'command' ? 'active' : ''}`}
+              onClick={() => onPageChange('command')}
+            >
+              {icons.command}
+              {t('sidebar.command')}
+            </button>
+
+            <button
+              type="button"
               className={`nav-item ${systemExpanded ? 'active' : ''}`}
               onClick={() => onPageChange(systemExpanded ? activePage : 'users')}
             >
               {icons.settings}
-              系统管理
+              {t('sidebar.system')}
               <span className="nav-arrow">{systemExpanded ? icons.chevronUp : icons.chevronDown}</span>
             </button>
             {systemExpanded && (
@@ -209,21 +252,21 @@ export function Sidebar({
                   className={`nav-sub-item ${activePage === 'users' ? 'active' : ''}`}
                   onClick={() => onPageChange('users')}
                 >
-                  用户管理
+                  {t('sidebar.users')}
                 </button>
                 <button
                   type="button"
                   className={`nav-sub-item ${activePage === 'dictionaries' ? 'active' : ''}`}
                   onClick={() => onPageChange('dictionaries')}
                 >
-                  字典管理
+                  {t('sidebar.dictionaries')}
                 </button>
                 <button
                   type="button"
                   className={`nav-sub-item ${activePage === 'logs' ? 'active' : ''}`}
                   onClick={() => onPageChange('logs')}
                 >
-                  日志管理
+                  {t('sidebar.logs')}
                 </button>
               </div>
             )}
@@ -236,7 +279,7 @@ export function Sidebar({
           onClick={() => onPageChange('files')}
         >
           {icons.files}
-          文件管理
+          {t('sidebar.files')}
         </button>
 
         {isAdmin && (
@@ -247,7 +290,7 @@ export function Sidebar({
               onClick={() => onPageChange('dataExport')}
             >
               {icons.dataExport}
-              数据出境
+              {t('sidebar.dataExport')}
             </button>
 
             <button
@@ -256,7 +299,7 @@ export function Sidebar({
               onClick={() => onPageChange('aggregation')}
             >
               {icons.aggregation}
-              数据汇聚
+              {t('sidebar.aggregation')}
             </button>
           </>
         )}
@@ -273,7 +316,7 @@ export function Sidebar({
 
           {icons.location}
 
-          货运追踪
+          {t('sidebar.freight')}
 
           <span className="nav-arrow">{freightExpanded ? icons.chevronUp : icons.chevronDown}</span>
 
@@ -299,7 +342,7 @@ export function Sidebar({
 
             >
 
-              常规
+              {t('sidebar.regular')}
 
             </button>
 
@@ -319,7 +362,7 @@ export function Sidebar({
 
             >
 
-              已归档
+              {t('sidebar.archived')}
 
             </button>
 
@@ -337,21 +380,45 @@ export function Sidebar({
 
           {icons.bell}
 
-          消息中心
+          {t('sidebar.messages')}
 
         </button>
 
 
 
-        <button type="button" className="nav-item lang-item">
-
-          <span className="lang-flag">🇨🇳</span>
-
-          中文
-
-          <span className="nav-arrow">{icons.chevronDown}</span>
-
-        </button>
+        <div className="lang-switcher" ref={langSwitcherRef}>
+          <button
+            type="button"
+            className={`nav-item lang-item ${langOpen ? 'active' : ''}`}
+            onClick={() => setLangOpen((open) => !open)}
+            aria-expanded={langOpen}
+            aria-haspopup="listbox"
+          >
+            <span className="lang-flag">{locale === 'zh' ? '🇨🇳' : '🇬🇧'}</span>
+            {locale === 'zh' ? t('sidebar.langZh') : t('sidebar.langEn')}
+            <span className="nav-arrow">{langOpen ? icons.chevronUp : icons.chevronDown}</span>
+          </button>
+          {langOpen && (
+            <div className="lang-menu" role="listbox">
+              {(['zh', 'en'] as Locale[]).map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  role="option"
+                  aria-selected={locale === code}
+                  className={`lang-menu-item ${locale === code ? 'active' : ''}`}
+                  onClick={() => {
+                    setLocale(code)
+                    setLangOpen(false)
+                  }}
+                >
+                  <span className="lang-flag">{code === 'zh' ? '🇨🇳' : '🇬🇧'}</span>
+                  {code === 'zh' ? t('sidebar.langZh') : t('sidebar.langEn')}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
 
 
@@ -359,7 +426,7 @@ export function Sidebar({
 
           {icons.logout}
 
-          退出登录
+          {t('sidebar.logout')}
 
         </button>
 
@@ -373,7 +440,7 @@ export function Sidebar({
           <div className="user-avatar">{avatarLetter}</div>
           <div className="user-info">
             <span className="user-name">{user.displayName}</span>
-            <span className="user-role">{user.roleLabel}</span>
+            <span className="user-role">{t(`role.${user.role}`)}</span>
           </div>
         </button>
 
