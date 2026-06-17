@@ -1,0 +1,425 @@
+.freight-map-test-page {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background: #0f1720;
+  color: #e8edf2;
+}
+
+.freight-map-test-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.freight-map-test-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.freight-map-test-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: rgba(232, 237, 242, 0.72);
+}
+
+.freight-map-test-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.freight-map-test-en-hint {
+  max-width: 280px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(232, 237, 242, 0.65);
+}
+
+.freight-map-test-actions button {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.freight-map-test-actions button.active {
+  border-color: #5aad4a;
+  background: rgba(90, 173, 74, 0.16);
+}
+
+.freight-map-test-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 20px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.freight-map-test-query {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.freight-map-test-query label {
+  font-size: 13px;
+  color: rgba(232, 237, 242, 0.8);
+}
+
+.freight-map-test-query input {
+  min-width: 220px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+}
+
+.freight-map-test-query button {
+  padding: 7px 14px;
+  border: 1px solid rgba(90, 173, 74, 0.5);
+  border-radius: 6px;
+  background: rgba(90, 173, 74, 0.18);
+  color: inherit;
+  cursor: pointer;
+}
+
+.freight-map-test-query button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.freight-map-test-error {
+  font-size: 13px;
+  color: #f87171;
+}
+
+.freight-map-test-summary {
+  flex: 1;
+  min-width: 280px;
+}
+
+.freight-map-test-summary-title {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.freight-map-test-stations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 12px;
+  color: rgba(232, 237, 242, 0.72);
+}
+
+.freight-map-test-stations strong {
+  margin-left: 6px;
+  color: #e8edf2;
+}
+
+.freight-lines-map-root {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.freight-lines-map {
+  width: 100%;
+  height: 100%;
+  background: #1a2634;
+}
+
+.freight-lines-map .leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.freight-lines-map-token-hint {
+  position: absolute;
+  left: 12px;
+  bottom: 36px;
+  z-index: 500;
+  max-width: 320px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(15, 23, 32, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.freight-lines-map-legend {
+  position: absolute;
+  right: 12px;
+  bottom: 36px;
+  z-index: 500;
+  min-width: 120px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 32, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+}
+
+.freight-lines-map-legend-title {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.freight-lines-map-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.freight-lines-map-legend-row:first-of-type {
+  margin-top: 0;
+}
+
+.freight-lines-map-legend-line.freight {
+  display: inline-block;
+  width: 24px;
+  height: 0;
+  border-top: 2px solid #b8860b;
+  opacity: 0.85;
+}
+
+.freight-lines-map-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #5aad4a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.freight-lines-map-legend-line.trajectory-done {
+  display: inline-block;
+  width: 24px;
+  height: 0;
+  border-top: 3px solid #2563eb;
+}
+
+.freight-lines-map-legend-line.trajectory-planned {
+  display: inline-block;
+  width: 24px;
+  height: 0;
+  border-top: 2px dashed #2563eb;
+  opacity: 0.7;
+}
+
+.freight-lines-map-legend-dot.trajectory-passed {
+  width: 8px;
+  height: 8px;
+  background: #64748b;
+  border-color: #e2e8f0;
+}
+
+.freight-lines-map-legend-dot.trajectory-current {
+  width: 12px;
+  height: 12px;
+  background: #f97316;
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.35);
+}
+
+.tmtm-map-marker {
+  background: transparent;
+  border: none;
+}
+
+.tmtm-map-marker-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.tmtm-map-marker-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #5aad4a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.tmtm-map-marker-label {
+  max-width: 88px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  color: #1a2634;
+  text-shadow:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.freight-lines-map .tmtm-map-popup {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.freight-lines-map .tmtm-map-popup strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.trajectory-map-marker {
+  background: transparent;
+  border: none;
+}
+
+.trajectory-map-marker-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.trajectory-map-marker-dot-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.trajectory-map-marker-dot {
+  position: relative;
+  z-index: 2;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #2563eb;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.trajectory-map-marker-wrap--departure .trajectory-map-marker-dot,
+.trajectory-map-marker-wrap--arrival .trajectory-map-marker-dot {
+  width: 12px;
+  height: 12px;
+  background: #2563eb;
+}
+
+.trajectory-map-marker-wrap--passed .trajectory-map-marker-dot-wrap {
+  width: 16px;
+  height: 16px;
+}
+
+.trajectory-map-marker-wrap--passed .trajectory-map-marker-dot {
+  width: 7px;
+  height: 7px;
+  border-width: 1.5px;
+  background: #64748b;
+  box-shadow: none;
+}
+
+.trajectory-map-marker-wrap--passed .trajectory-map-marker-label {
+  font-size: 9px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.trajectory-map-marker-wrap--current .trajectory-map-marker-dot-wrap {
+  width: 28px;
+  height: 28px;
+}
+
+.trajectory-map-marker-wrap--current .trajectory-map-marker-dot {
+  width: 16px;
+  height: 16px;
+  border-width: 3px;
+  background: #f97316;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.45);
+}
+
+.trajectory-map-marker-ring {
+  position: absolute;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #f97316;
+  opacity: 0.75;
+}
+
+.trajectory-map-marker-pulse {
+  position: absolute;
+  z-index: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(249, 115, 22, 0.35);
+  animation: trajectory-marker-pulse 2s ease-in-out infinite;
+}
+
+@keyframes trajectory-marker-pulse {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.15;
+  }
+}
+
+.trajectory-map-marker-badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f97316;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+.trajectory-map-marker-wrap--current .trajectory-map-marker-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #c2410c;
+}
+
+.trajectory-map-marker-label {
+  max-width: 96px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  color: #1e3a8a;
+  text-shadow:
+    -1px -1px 0 #fff,
+    1px -1px 0 #fff,
+    -1px 1px 0 #fff,
+    1px 1px 0 #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

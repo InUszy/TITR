@@ -11,7 +11,7 @@ import {
   type NodeStatus,
 } from '../types/commandDashboard'
 import { useLanguage } from '../i18n/LanguageContext'
-import { addTiandituBaseLayers, getTiandituToken } from '../utils/tianditu'
+import { addTiandituBaseLayers, swapTiandituAnnotationLayer, getTiandituToken } from '../utils/tianditu'
 import { createFreightLinesLayer, loadFreightLinesData } from '../utils/freightLinesCanvas'
 
 const STATUS_COLORS: Record<NodeStatus, string> = {
@@ -80,6 +80,8 @@ export function CommandCorridorMap({
   const routesLayerRef = useRef<L.LayerGroup | null>(null)
   const freightLayerRef = useRef<L.Layer | null>(null)
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
+  const annotationLayerRef = useRef<L.Layer | null>(null)
+  const annotationLocaleRef = useRef<string | null>(null)
   const selectedNodeIdRef = useRef(selectedNodeId)
   const onAnchorUpdateRef = useRef(onNodeAnchorUpdate)
   selectedNodeIdRef.current = selectedNodeId
@@ -135,7 +137,9 @@ export function CommandCorridorMap({
     })
 
     if (token) {
-      addTiandituBaseLayers(map, token)
+      const { annotation } = addTiandituBaseLayers(map, token, locale)
+      annotationLayerRef.current = annotation
+      annotationLocaleRef.current = locale
     } else {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 18,
@@ -180,8 +184,23 @@ export function CommandCorridorMap({
       freightLayerRef.current = null
       routesLayerRef.current = null
       markersLayerRef.current = null
+      annotationLayerRef.current = null
+      annotationLocaleRef.current = null
     }
   }, [token])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !token || annotationLocaleRef.current === locale) return
+
+    annotationLayerRef.current = swapTiandituAnnotationLayer(
+      map,
+      token,
+      locale,
+      annotationLayerRef.current,
+    )
+    annotationLocaleRef.current = locale
+  }, [locale, token])
 
   useEffect(() => {
     const map = mapRef.current
