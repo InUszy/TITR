@@ -15,8 +15,6 @@ import {
   type RiskLevel,
 } from '../types/commandDashboard'
 
-const MAP_VIEWBOX = { width: 420, height: 280 }
-
 const expandIcon = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M8 3H5a2 2 0 0 0-2 2v3" />
@@ -35,15 +33,13 @@ const compressIcon = (
   </svg>
 )
 
-function getAnchoredPopupStyle(node: CorridorNode) {
-  const leftPct = (node.x / MAP_VIEWBOX.width) * 100
-  const topPct = (node.y / MAP_VIEWBOX.height) * 100
-  const flipX = leftPct > 62
-  const flipY = topPct > 50
+function getAnchoredPopupStyle(anchor: { x: number; y: number; w: number; h: number }) {
+  const flipX = anchor.x > anchor.w * 0.58
+  const flipY = anchor.y > anchor.h * 0.5
   return {
-    left: `${leftPct}%`,
-    top: `${topPct}%`,
-    transform: `translate(calc(${flipX ? '-100% - 8px' : '12px'}), calc(${flipY ? '-100% - 8px' : '12px'}))`,
+    left: anchor.x,
+    top: anchor.y,
+    transform: `translate(calc(${flipX ? '-100% - 12px' : '12px'}), calc(${flipY ? '-100% - 12px' : '12px'}))`,
   } as const
 }
 
@@ -57,14 +53,24 @@ function nodeDisplayName(node: CorridorNode, locale: string) {
   return locale === 'en' ? node.nameEn : node.name
 }
 
-function RiskAlertPopup({ risk, node, onClose }: { risk: RiskAlert; node: CorridorNode; onClose: () => void }) {
+function RiskAlertPopup({
+  risk,
+  node,
+  anchor,
+  onClose,
+}: {
+  risk: RiskAlert
+  node: CorridorNode
+  anchor: { x: number; y: number; w: number; h: number }
+  onClose: () => void
+}) {
   const { t, locale } = useLanguage()
   const affectedTrajectories = activeTrajectories.filter(
     (t) => t.currentNodeId === risk.nodeId || t.routeNodeIds.includes(risk.nodeId),
   )
 
   return (
-    <div className="cmd-map-popup cmd-risk-popup" style={getAnchoredPopupStyle(node)}>
+    <div className="cmd-map-popup cmd-risk-popup" style={getAnchoredPopupStyle(anchor)}>
       <div className={`cmd-risk-popup-accent cmd-risk-item-${risk.level}`} />
       <div className="cmd-map-popup-header">
         <div className="cmd-risk-popup-title-row">
@@ -91,12 +97,20 @@ function RiskAlertPopup({ risk, node, onClose }: { risk: RiskAlert; node: Corrid
   )
 }
 
-function NodeDetailPanel({ node, onClose }: { node: CorridorNode; onClose: () => void }) {
+function NodeDetailPanel({
+  node,
+  anchor,
+  onClose,
+}: {
+  node: CorridorNode
+  anchor: { x: number; y: number; w: number; h: number }
+  onClose: () => void
+}) {
   const { t, locale } = useLanguage()
   const relatedRisks = riskAlerts.filter((r) => r.nodeId === node.id)
 
   return (
-    <div className="cmd-map-popup cmd-node-popup" style={getAnchoredPopupStyle(node)}>
+    <div className="cmd-map-popup cmd-node-popup" style={getAnchoredPopupStyle(anchor)}>
       <div className="cmd-map-popup-header">
         <div>
           <h3>{nodeDisplayName(node, locale)}</h3>
@@ -262,6 +276,7 @@ export function CommandDashboardPage() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [selectedRiskId, setSelectedRiskId] = useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [popupAnchor, setPopupAnchor] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
 
   useEffect(() => {
     const syncFullscreen = () => {
@@ -336,6 +351,7 @@ export function CommandDashboardPage() {
   const handleClosePopup = () => {
     setSelectedNodeId(null)
     setSelectedRiskId(null)
+    setPopupAnchor(null)
   }
 
   return (
@@ -423,13 +439,19 @@ export function CommandDashboardPage() {
               if (node) handleSelectNode(node.id)
               else handleClosePopup()
             }}
+            onNodeAnchorUpdate={setPopupAnchor}
           />
           <div className="cmd-map-popups" onClick={(e) => e.stopPropagation()}>
-            {selectedRisk && selectedNode && (
-              <RiskAlertPopup risk={selectedRisk} node={selectedNode} onClose={handleClosePopup} />
+            {selectedRisk && selectedNode && popupAnchor && (
+              <RiskAlertPopup
+                risk={selectedRisk}
+                node={selectedNode}
+                anchor={popupAnchor}
+                onClose={handleClosePopup}
+              />
             )}
-            {selectedNode && !selectedRisk && (
-              <NodeDetailPanel node={selectedNode} onClose={handleClosePopup} />
+            {selectedNode && !selectedRisk && popupAnchor && (
+              <NodeDetailPanel node={selectedNode} anchor={popupAnchor} onClose={handleClosePopup} />
             )}
           </div>
         </section>

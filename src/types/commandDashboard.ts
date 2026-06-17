@@ -10,8 +10,8 @@ export interface CorridorNode {
   region: Exclude<DashboardRegion, 'all'>
   regionLabel: string
   type: NodeType
-  x: number
-  y: number
+  lat: number
+  lng: number
   status: NodeStatus
   containers: number
   pendingOps: number
@@ -26,7 +26,6 @@ export interface CorridorRoute {
   from: string
   to: string
   type: 'rail' | 'sea'
-  path: string
   activeCount: number
 }
 
@@ -65,47 +64,43 @@ export const REGION_OPTIONS: { value: DashboardRegion; label: string }[] = [
 ]
 
 export const corridorNodes: CorridorNode[] = [
-  // 中国段（东侧）— 东部城市更靠右
-  { id: 'lianyungang', name: '连云港', nameEn: 'Lianyungang', region: 'china', regionLabel: '中国段', type: 'port', x: 402, y: 138, status: 'normal', containers: 124, pendingOps: 22, congestion: '畅通', avgWaitHours: 2.8, throughputToday: 198, remark: '海铁联运出海口' },
-  { id: 'beijing', name: '北京', nameEn: 'Beijing', region: 'china', regionLabel: '中国段', type: 'railway', x: 385, y: 82, status: 'normal', containers: 86, pendingOps: 12, congestion: '畅通', avgWaitHours: 2.1, throughputToday: 142, remark: '华北集结枢纽' },
-  { id: 'xian', name: '西安', nameEn: "Xi'an", region: 'china', regionLabel: '中国段', type: 'railway', x: 368, y: 172, status: 'busy', containers: 214, pendingOps: 38, congestion: '轻度拥堵', avgWaitHours: 4.5, throughputToday: 328, remark: '中欧班列主要始发站' },
-  { id: 'urumqi', name: '乌鲁木齐', nameEn: 'Urumqi', region: 'china', regionLabel: '中国段', type: 'railway', x: 350, y: 108, status: 'normal', containers: 96, pendingOps: 15, congestion: '畅通', avgWaitHours: 3.2, throughputToday: 156, remark: '西向通道集结中心' },
-  // 中亚段 — 阿斯塔纳偏北，阿腾科里偏南
-  { id: 'alashankou', name: '阿拉山口', nameEn: 'Alashankou', region: 'centralAsia', regionLabel: '中亚段', type: 'border', x: 322, y: 132, status: 'normal', containers: 78, pendingOps: 14, congestion: '轻度拥堵', avgWaitHours: 4.1, throughputToday: 112, remark: '新疆西向铁路口岸' },
-  { id: 'khorgos', name: '霍尔果斯', nameEn: 'Khorgos', region: 'centralAsia', regionLabel: '中亚段', type: 'border', x: 332, y: 158, status: 'busy', containers: 186, pendingOps: 42, congestion: '中度拥堵', avgWaitHours: 6.2, throughputToday: 276, remark: '中哈边境口岸' },
-  { id: 'astana', name: '阿斯塔纳', nameEn: 'Astana', region: 'centralAsia', regionLabel: '中亚段', type: 'railway', x: 298, y: 50, status: 'normal', containers: 102, pendingOps: 18, congestion: '畅通', avgWaitHours: 3.5, throughputToday: 164, remark: '哈萨克斯坦铁路枢纽' },
-  { id: 'altynkol', name: '阿腾科里', nameEn: 'Altynkol', region: 'centralAsia', regionLabel: '中亚段', type: 'railway', x: 306, y: 192, status: 'busy', containers: 156, pendingOps: 36, congestion: '中度拥堵', avgWaitHours: 5.8, throughputToday: 224, remark: '宽准轨换装站' },
-  // 里海段 — 阿克套在东岸，巴库在西岸
-  { id: 'aktau', name: '阿克套', nameEn: 'Aktau', region: 'caspian', regionLabel: '里海段', type: 'port', x: 270, y: 112, status: 'normal', containers: 88, pendingOps: 16, congestion: '畅通', avgWaitHours: 3.0, throughputToday: 98, remark: '里海东岸港口枢纽' },
-  { id: 'baku', name: '巴库', nameEn: 'Baku', region: 'caspian', regionLabel: '里海段', type: 'port', x: 214, y: 162, status: 'normal', containers: 112, pendingOps: 20, congestion: '轻度拥堵', avgWaitHours: 4.2, throughputToday: 136, remark: '跨里海运输节点' },
-  { id: 'tbilisi', name: '第比利斯', nameEn: 'Tbilisi', region: 'caspian', regionLabel: '里海段', type: 'railway', x: 192, y: 136, status: 'normal', containers: 64, pendingOps: 10, congestion: '畅通', avgWaitHours: 2.6, throughputToday: 88, remark: '高加索陆港' },
-  { id: 'poti', name: '波季', nameEn: 'Poti', region: 'caspian', regionLabel: '里海段', type: 'port', x: 168, y: 102, status: 'risk', containers: 94, pendingOps: 28, congestion: '严重拥堵', avgWaitHours: 8.5, throughputToday: 72, remark: '黑海东岸港口，当前作业延迟' },
-  // 欧洲段 — 卡尔斯在黑海南下方，伊斯坦布尔偏西
-  { id: 'kars', name: '卡尔斯', nameEn: 'Kars', region: 'europe', regionLabel: '欧洲段', type: 'border', x: 162, y: 208, status: 'normal', containers: 58, pendingOps: 9, congestion: '畅通', avgWaitHours: 2.2, throughputToday: 74, remark: '土耳其边境站' },
-  { id: 'istanbul', name: '伊斯坦布尔', nameEn: 'Istanbul', region: 'europe', regionLabel: '欧洲段', type: 'railway', x: 88, y: 150, status: 'normal', containers: 72, pendingOps: 11, congestion: '畅通', avgWaitHours: 2.4, throughputToday: 96, remark: '欧亚交汇枢纽' },
-  { id: 'budapest', name: '布达佩斯', nameEn: 'Budapest', region: 'europe', regionLabel: '欧洲段', type: 'railway', x: 68, y: 98, status: 'normal', containers: 48, pendingOps: 7, congestion: '畅通', avgWaitHours: 1.8, throughputToday: 62, remark: '中东欧分拨中心' },
-  { id: 'warsaw', name: '华沙', nameEn: 'Warsaw', region: 'europe', regionLabel: '欧洲段', type: 'railway', x: 42, y: 85, status: 'normal', containers: 52, pendingOps: 8, congestion: '畅通', avgWaitHours: 1.6, throughputToday: 68, remark: '欧洲内陆枢纽' },
-  { id: 'duisburg', name: '杜伊斯堡', nameEn: 'Duisburg', region: 'europe', regionLabel: '欧洲段', type: 'railway', x: 22, y: 80, status: 'busy', containers: 118, pendingOps: 24, congestion: '轻度拥堵', avgWaitHours: 3.8, throughputToday: 142, remark: '欧洲终点枢纽' },
+  { id: 'lianyungang', name: '连云港', nameEn: 'Lianyungang', region: 'china', regionLabel: '中国段', type: 'port', lat: 34.596, lng: 119.221, status: 'normal', containers: 124, pendingOps: 22, congestion: '畅通', avgWaitHours: 2.8, throughputToday: 198, remark: '海铁联运出海口' },
+  { id: 'beijing', name: '北京', nameEn: 'Beijing', region: 'china', regionLabel: '中国段', type: 'railway', lat: 39.904, lng: 116.407, status: 'normal', containers: 86, pendingOps: 12, congestion: '畅通', avgWaitHours: 2.1, throughputToday: 142, remark: '华北集结枢纽' },
+  { id: 'xian', name: '西安', nameEn: "Xi'an", region: 'china', regionLabel: '中国段', type: 'railway', lat: 34.341, lng: 108.940, status: 'busy', containers: 214, pendingOps: 38, congestion: '轻度拥堵', avgWaitHours: 4.5, throughputToday: 328, remark: '中欧班列主要始发站' },
+  { id: 'urumqi', name: '乌鲁木齐', nameEn: 'Urumqi', region: 'china', regionLabel: '中国段', type: 'railway', lat: 43.826, lng: 87.617, status: 'normal', containers: 96, pendingOps: 15, congestion: '畅通', avgWaitHours: 3.2, throughputToday: 156, remark: '西向通道集结中心' },
+  { id: 'alashankou', name: '阿拉山口', nameEn: 'Alashankou', region: 'centralAsia', regionLabel: '中亚段', type: 'border', lat: 45.172, lng: 82.575, status: 'normal', containers: 78, pendingOps: 14, congestion: '轻度拥堵', avgWaitHours: 4.1, throughputToday: 112, remark: '新疆西向铁路口岸' },
+  { id: 'khorgos', name: '霍尔果斯', nameEn: 'Khorgos', region: 'centralAsia', regionLabel: '中亚段', type: 'border', lat: 44.213, lng: 80.414, status: 'busy', containers: 186, pendingOps: 42, congestion: '中度拥堵', avgWaitHours: 6.2, throughputToday: 276, remark: '中哈边境口岸' },
+  { id: 'astana', name: '阿斯塔纳', nameEn: 'Astana', region: 'centralAsia', regionLabel: '中亚段', type: 'railway', lat: 51.169, lng: 71.449, status: 'normal', containers: 102, pendingOps: 18, congestion: '畅通', avgWaitHours: 3.5, throughputToday: 164, remark: '哈萨克斯坦铁路枢纽' },
+  { id: 'altynkol', name: '阿腾科里', nameEn: 'Altynkol', region: 'centralAsia', regionLabel: '中亚段', type: 'railway', lat: 44.165, lng: 80.295, status: 'busy', containers: 156, pendingOps: 36, congestion: '中度拥堵', avgWaitHours: 5.8, throughputToday: 224, remark: '宽准轨换装站' },
+  { id: 'aktau', name: '阿克套', nameEn: 'Aktau', region: 'caspian', regionLabel: '里海段', type: 'port', lat: 43.650, lng: 51.158, status: 'normal', containers: 88, pendingOps: 16, congestion: '畅通', avgWaitHours: 3.0, throughputToday: 98, remark: '里海东岸港口枢纽' },
+  { id: 'baku', name: '巴库', nameEn: 'Baku', region: 'caspian', regionLabel: '里海段', type: 'port', lat: 40.409, lng: 49.867, status: 'normal', containers: 112, pendingOps: 20, congestion: '轻度拥堵', avgWaitHours: 4.2, throughputToday: 136, remark: '跨里海运输节点' },
+  { id: 'tbilisi', name: '第比利斯', nameEn: 'Tbilisi', region: 'caspian', regionLabel: '里海段', type: 'railway', lat: 41.715, lng: 44.827, status: 'normal', containers: 64, pendingOps: 10, congestion: '畅通', avgWaitHours: 2.6, throughputToday: 88, remark: '高加索陆港' },
+  { id: 'poti', name: '波季', nameEn: 'Poti', region: 'caspian', regionLabel: '里海段', type: 'port', lat: 42.152, lng: 41.671, status: 'risk', containers: 94, pendingOps: 28, congestion: '严重拥堵', avgWaitHours: 8.5, throughputToday: 72, remark: '黑海东岸港口，当前作业延迟' },
+  { id: 'kars', name: '卡尔斯', nameEn: 'Kars', region: 'europe', regionLabel: '欧洲段', type: 'border', lat: 40.601, lng: 43.097, status: 'normal', containers: 58, pendingOps: 9, congestion: '畅通', avgWaitHours: 2.2, throughputToday: 74, remark: '土耳其边境站' },
+  { id: 'istanbul', name: '伊斯坦布尔', nameEn: 'Istanbul', region: 'europe', regionLabel: '欧洲段', type: 'railway', lat: 41.008, lng: 28.978, status: 'normal', containers: 72, pendingOps: 11, congestion: '畅通', avgWaitHours: 2.4, throughputToday: 96, remark: '欧亚交汇枢纽' },
+  { id: 'budapest', name: '布达佩斯', nameEn: 'Budapest', region: 'europe', regionLabel: '欧洲段', type: 'railway', lat: 47.497, lng: 19.040, status: 'normal', containers: 48, pendingOps: 7, congestion: '畅通', avgWaitHours: 1.8, throughputToday: 62, remark: '中东欧分拨中心' },
+  { id: 'warsaw', name: '华沙', nameEn: 'Warsaw', region: 'europe', regionLabel: '欧洲段', type: 'railway', lat: 52.229, lng: 21.012, status: 'normal', containers: 52, pendingOps: 8, congestion: '畅通', avgWaitHours: 1.6, throughputToday: 68, remark: '欧洲内陆枢纽' },
+  { id: 'duisburg', name: '杜伊斯堡', nameEn: 'Duisburg', region: 'europe', regionLabel: '欧洲段', type: 'railway', lat: 51.434, lng: 6.762, status: 'busy', containers: 118, pendingOps: 24, congestion: '轻度拥堵', avgWaitHours: 3.8, throughputToday: 142, remark: '欧洲终点枢纽' },
 ]
 
 export const corridorRoutes: CorridorRoute[] = [
-  { id: 'r1', from: 'xian', to: 'khorgos', type: 'rail', path: 'M 368 172 L 332 158', activeCount: 42 },
-  { id: 'r2', from: 'urumqi', to: 'alashankou', type: 'rail', path: 'M 350 108 L 322 132', activeCount: 18 },
-  { id: 'r3', from: 'khorgos', to: 'altynkol', type: 'rail', path: 'M 332 158 L 306 192', activeCount: 36 },
-  { id: 'r4', from: 'altynkol', to: 'aktau', type: 'rail', path: 'M 306 192 Q 290 155 270 112', activeCount: 22 },
-  { id: 'r5', from: 'aktau', to: 'baku', type: 'sea', path: 'M 270 112 Q 248 138 214 162', activeCount: 16 },
-  { id: 'r6', from: 'baku', to: 'tbilisi', type: 'rail', path: 'M 214 162 L 192 136', activeCount: 14 },
-  { id: 'r7', from: 'tbilisi', to: 'poti', type: 'rail', path: 'M 192 136 L 168 102', activeCount: 12 },
-  { id: 'r8', from: 'tbilisi', to: 'kars', type: 'rail', path: 'M 192 136 L 162 208', activeCount: 10 },
-  { id: 'r9', from: 'kars', to: 'istanbul', type: 'rail', path: 'M 162 208 Q 125 185 88 150', activeCount: 8 },
-  { id: 'r10', from: 'poti', to: 'istanbul', type: 'sea', path: 'M 168 102 Q 128 125 88 150', activeCount: 6 },
-  { id: 'r11', from: 'istanbul', to: 'budapest', type: 'rail', path: 'M 88 150 Q 78 125 68 98', activeCount: 14 },
-  { id: 'r12', from: 'budapest', to: 'warsaw', type: 'rail', path: 'M 68 98 L 42 85', activeCount: 11 },
-  { id: 'r13', from: 'warsaw', to: 'duisburg', type: 'rail', path: 'M 42 85 L 22 80', activeCount: 16 },
-  { id: 'r14', from: 'beijing', to: 'xian', type: 'rail', path: 'M 385 82 L 368 172', activeCount: 24 },
-  { id: 'r15', from: 'lianyungang', to: 'xian', type: 'rail', path: 'M 402 138 L 368 172', activeCount: 20 },
-  { id: 'r16', from: 'astana', to: 'aktau', type: 'rail', path: 'M 298 50 L 270 112', activeCount: 15 },
-  { id: 'r17', from: 'alashankou', to: 'khorgos', type: 'rail', path: 'M 322 132 L 332 158', activeCount: 12 },
+  { id: 'r1', from: 'xian', to: 'khorgos', type: 'rail', activeCount: 42 },
+  { id: 'r2', from: 'urumqi', to: 'alashankou', type: 'rail', activeCount: 18 },
+  { id: 'r3', from: 'khorgos', to: 'altynkol', type: 'rail', activeCount: 36 },
+  { id: 'r4', from: 'altynkol', to: 'aktau', type: 'rail', activeCount: 22 },
+  { id: 'r5', from: 'aktau', to: 'baku', type: 'sea', activeCount: 16 },
+  { id: 'r6', from: 'baku', to: 'tbilisi', type: 'rail', activeCount: 14 },
+  { id: 'r7', from: 'tbilisi', to: 'poti', type: 'rail', activeCount: 12 },
+  { id: 'r8', from: 'tbilisi', to: 'kars', type: 'rail', activeCount: 10 },
+  { id: 'r9', from: 'kars', to: 'istanbul', type: 'rail', activeCount: 8 },
+  { id: 'r10', from: 'poti', to: 'istanbul', type: 'sea', activeCount: 6 },
+  { id: 'r11', from: 'istanbul', to: 'budapest', type: 'rail', activeCount: 14 },
+  { id: 'r12', from: 'budapest', to: 'warsaw', type: 'rail', activeCount: 11 },
+  { id: 'r13', from: 'warsaw', to: 'duisburg', type: 'rail', activeCount: 16 },
+  { id: 'r14', from: 'beijing', to: 'xian', type: 'rail', activeCount: 24 },
+  { id: 'r15', from: 'lianyungang', to: 'xian', type: 'rail', activeCount: 20 },
+  { id: 'r16', from: 'astana', to: 'aktau', type: 'rail', activeCount: 15 },
+  { id: 'r17', from: 'alashankou', to: 'khorgos', type: 'rail', activeCount: 12 },
 ]
 
 export const riskAlerts: RiskAlert[] = [
@@ -212,6 +207,14 @@ export const activeTrajectories: ActiveTrajectory[] = [
 
 export function getNodeById(id: string) {
   return corridorNodes.find((n) => n.id === id)
+}
+
+export function getNodesForRegion(region: DashboardRegion) {
+  return region === 'all' ? corridorNodes : corridorNodes.filter((n) => n.region === region)
+}
+
+export function nodeLatLng(node: CorridorNode): [number, number] {
+  return [node.lat, node.lng]
 }
 
 export function nodeStatusLabel(status: NodeStatus) {

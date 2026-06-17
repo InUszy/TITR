@@ -140,10 +140,12 @@ export const zh: TranslationTree = {
     },
     mapLegend: {
       title: '图例',
+      freight: '货运铁路 (OSM)',
       rail: '铁路',
       sea: '海运',
       riskNode: '风险节点',
     },
+    mapTokenHint: '未配置天地图 Key，当前使用备用底图。请在 .env 中设置 VITE_TIANDITU_TK',
     popup: {
       status: '状态',
       congestion: '拥堵',

@@ -1,11 +1,18 @@
+import { useEffect, useMemo, useRef } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import {
-  corridorNodes,
   corridorRoutes,
+  getNodeById,
+  getNodesForRegion,
+  nodeLatLng,
   type CorridorNode,
   type DashboardRegion,
   type NodeStatus,
 } from '../types/commandDashboard'
 import { useLanguage } from '../i18n/LanguageContext'
+import { addTiandituBaseLayers, getTiandituToken } from '../utils/tianditu'
+import { createFreightLinesLayer, loadFreightLinesData } from '../utils/freightLinesCanvas'
 
 const STATUS_COLORS: Record<NodeStatus, string> = {
   normal: '#5aad4a',
@@ -14,113 +21,244 @@ const STATUS_COLORS: Record<NodeStatus, string> = {
   offline: '#999',
 }
 
+const CORRIDOR_DEFAULT_CENTER: L.LatLngExpression = [44, 58]
+const CORRIDOR_DEFAULT_ZOOM = 4
+
 interface CommandCorridorMapProps {
   region: DashboardRegion
   selectedNodeId: string | null
   onSelectNode: (node: CorridorNode | null) => void
+  onNodeAnchorUpdate?: (point: { x: number; y: number; w: number; h: number } | null) => void
 }
 
-export function CommandCorridorMap({ region, selectedNodeId, onSelectNode }: CommandCorridorMapProps) {
+function routeLatLngs(from: CorridorNode, to: CorridorNode, type: 'rail' | 'sea'): L.LatLngExpression[] {
+  if (type === 'rail') {
+    return [nodeLatLng(from), nodeLatLng(to)]
+  }
+  const midLat = (from.lat + to.lat) / 2
+  const midLng = (from.lng + to.lng) / 2
+  const offsetLat = (to.lng - from.lng) * 0.08
+  const offsetLng = -(to.lat - from.lat) * 0.08
+  return [
+    nodeLatLng(from),
+    [midLat + offsetLat, midLng + offsetLng],
+    nodeLatLng(to),
+  ]
+}
+
+function createNodeIcon(node: CorridorNode, label: string, isSelected: boolean) {
+  const color = STATUS_COLORS[node.status]
+  const pulse = node.status === 'risk'
+    ? '<span class="cmd-leaflet-marker-pulse"></span>'
+    : ''
+  const ring = isSelected ? '<span class="cmd-leaflet-marker-ring"></span>' : ''
+
+  return L.divIcon({
+    className: 'cmd-leaflet-marker',
+    html: `
+      <div class="cmd-leaflet-marker-wrap${isSelected ? ' selected' : ''}">
+        ${ring}
+        ${pulse}
+        <span class="cmd-leaflet-marker-dot" style="background:${color}"></span>
+        <span class="cmd-leaflet-marker-label">${label}</span>
+      </div>
+    `,
+    iconSize: [72, 36],
+    iconAnchor: [36, 14],
+  })
+}
+
+export function CommandCorridorMap({
+  region,
+  selectedNodeId,
+  onSelectNode,
+  onNodeAnchorUpdate,
+}: CommandCorridorMapProps) {
   const { t, locale } = useLanguage()
-  const visibleNodes = region === 'all'
-    ? corridorNodes
-    : corridorNodes.filter((n) => n.region === region)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<L.Map | null>(null)
+  const routesLayerRef = useRef<L.LayerGroup | null>(null)
+  const freightLayerRef = useRef<L.Layer | null>(null)
+  const markersLayerRef = useRef<L.LayerGroup | null>(null)
+  const selectedNodeIdRef = useRef(selectedNodeId)
+  const onAnchorUpdateRef = useRef(onNodeAnchorUpdate)
+  selectedNodeIdRef.current = selectedNodeId
+  onAnchorUpdateRef.current = onNodeAnchorUpdate
+  const token = getTiandituToken()
 
-  const visibleNodeIds = new Set(visibleNodes.map((n) => n.id))
-
-  const visibleRoutes = corridorRoutes.filter(
-    (r) => visibleNodeIds.has(r.from) && visibleNodeIds.has(r.to),
+  const visibleNodes = useMemo(
+    () => getNodesForRegion(region),
+    [region],
   )
 
+  const visibleNodeIds = useMemo(
+    () => new Set(visibleNodes.map((n) => n.id)),
+    [visibleNodes],
+  )
+
+  const visibleRoutes = useMemo(
+    () => corridorRoutes.filter((r) => visibleNodeIds.has(r.from) && visibleNodeIds.has(r.to)),
+    [visibleNodeIds],
+  )
+
+  const updateAnchor = (map: L.Map, nodeId: string | null) => {
+    const onNodeAnchorUpdate = onAnchorUpdateRef.current
+    if (!onNodeAnchorUpdate) return
+    if (!nodeId) {
+      onNodeAnchorUpdate(null)
+      return
+    }
+    const node = getNodeById(nodeId)
+    const container = containerRef.current
+    if (!node || !container) {
+      onNodeAnchorUpdate(null)
+      return
+    }
+    const point = map.latLngToContainerPoint(nodeLatLng(node))
+    onNodeAnchorUpdate({
+      x: point.x,
+      y: point.y,
+      w: container.clientWidth,
+      h: container.clientHeight,
+    })
+  }
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return
+
+    const map = L.map(containerRef.current, {
+      center: CORRIDOR_DEFAULT_CENTER,
+      zoom: CORRIDOR_DEFAULT_ZOOM,
+      zoomControl: true,
+      attributionControl: true,
+      preferCanvas: true,
+    })
+
+    if (token) {
+      addTiandituBaseLayers(map, token)
+    } else {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap',
+      }).addTo(map)
+    }
+
+    routesLayerRef.current = L.layerGroup().addTo(map)
+    markersLayerRef.current = L.layerGroup().addTo(map)
+    mapRef.current = map
+
+    let cancelled = false
+    loadFreightLinesData().then((data) => {
+      if (cancelled || !data || !mapRef.current) return
+      const layer = createFreightLinesLayer(data)
+      layer.addTo(mapRef.current)
+      freightLayerRef.current = layer
+    })
+
+    const handleLayout = () => updateAnchor(map, selectedNodeIdRef.current)
+    map.on('move', handleLayout)
+    map.on('zoom', handleLayout)
+    map.on('resize', handleLayout)
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize()
+      updateAnchor(map, selectedNodeIdRef.current)
+    })
+    resizeObserver.observe(containerRef.current)
+
+    return () => {
+      cancelled = true
+      resizeObserver.disconnect()
+      map.off('move', handleLayout)
+      map.off('zoom', handleLayout)
+      map.off('resize', handleLayout)
+      if (freightLayerRef.current) {
+        freightLayerRef.current.remove()
+      }
+      map.remove()
+      mapRef.current = null
+      freightLayerRef.current = null
+      routesLayerRef.current = null
+      markersLayerRef.current = null
+    }
+  }, [token])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const routesLayer = routesLayerRef.current
+    const markersLayer = markersLayerRef.current
+    if (!map || !routesLayer || !markersLayer) return
+
+    routesLayer.clearLayers()
+    visibleRoutes.forEach((route) => {
+      const from = getNodeById(route.from)
+      const to = getNodeById(route.to)
+      if (!from || !to) return
+
+      L.polyline(routeLatLngs(from, to, route.type), {
+        color: '#5aad4a',
+        weight: route.type === 'sea' ? 3 : 2,
+        opacity: 0.8,
+        dashArray: route.type === 'rail' ? '6 5' : undefined,
+      }).addTo(routesLayer)
+    })
+
+    markersLayer.clearLayers()
+    visibleNodes.forEach((node) => {
+      const isSelected = selectedNodeId === node.id
+      const label = locale === 'en' ? node.nameEn : node.name
+      const marker = L.marker(nodeLatLng(node), {
+        icon: createNodeIcon(node, label, isSelected),
+      })
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e)
+        onSelectNode(isSelected ? null : node)
+      })
+      marker.addTo(markersLayer)
+    })
+
+    const bounds = L.latLngBounds(visibleNodes.map((n) => nodeLatLng(n)))
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [36, 36], maxZoom: region === 'all' ? 5 : 7 })
+    }
+
+    updateAnchor(map, selectedNodeId)
+  }, [visibleNodes, visibleRoutes, selectedNodeId, locale, region, onSelectNode])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    updateAnchor(map, selectedNodeId)
+  }, [selectedNodeId, onNodeAnchorUpdate])
+
   return (
-    <svg className="cmd-map-svg" viewBox="0 0 420 280" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <filter id="cmd-node-glow">
-          <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#5aad4a" floodOpacity="0.6" />
-        </filter>
-      </defs>
-
-      <rect x="0" y="0" width="420" height="280" fill="#eef1f4" rx="8" />
-
-      {/* 高加索陆桥 */}
-      <path
-        d="M 178 88 L 228 88 L 228 200 L 178 200 Z"
-        fill="#e4e9ee"
-        opacity="0.5"
-      />
-
-      {/* 黑海（横向，偏西北） */}
-      <ellipse cx="148" cy="112" rx="30" ry="14" fill="#7ec8e3" opacity="0.85" />
-      <text x="148" y="115" textAnchor="middle" fontSize="7" fill="#4a90a4" opacity="0.8">BLACK SEA</text>
-
-      {/* 里海（纵向，居中，与黑海留出陆桥间距） */}
-      <ellipse cx="248" cy="145" rx="16" ry="52" fill="#7ec8e3" opacity="0.85" />
-      <text x="248" y="148" textAnchor="middle" fontSize="7" fill="#4a90a4" opacity="0.8">CASPIAN</text>
-
-      {visibleRoutes.map((route) => (
-        <path
-          key={route.id}
-          d={route.path}
-          fill="none"
-          stroke="#5aad4a"
-          strokeWidth={route.type === 'sea' ? 2.5 : 2}
-          strokeLinecap="round"
-          strokeDasharray={route.type === 'rail' ? '4 3' : undefined}
-          opacity={0.75}
-        />
-      ))}
-
-      {visibleNodes.map((node) => {
-        const isSelected = selectedNodeId === node.id
-        const r = isSelected ? 7 : node.status === 'risk' ? 6 : 5
-        return (
-          <g
-            key={node.id}
-            className="cmd-map-node"
-            onClick={(e) => {
-              e.stopPropagation()
-              onSelectNode(isSelected ? null : node)
-            }}
-            style={{ cursor: 'pointer' }}
-          >
-            {isSelected && (
-              <circle cx={node.x} cy={node.y} r={12} fill="none" stroke="#5aad4a" strokeWidth="1.5" opacity="0.5" />
-            )}
-            {node.status === 'risk' && (
-              <circle cx={node.x} cy={node.y} r={9} fill="#e74c3c" opacity="0.2" className="cmd-node-pulse" />
-            )}
-            <circle
-              cx={node.x}
-              cy={node.y}
-              r={r}
-              fill={STATUS_COLORS[node.status]}
-              filter={isSelected ? 'url(#cmd-node-glow)' : undefined}
-            />
-            <text
-              x={node.x}
-              y={node.y - r - 4}
-              textAnchor="middle"
-              fontSize="7"
-              fill="#333"
-              fontWeight={isSelected ? '600' : '400'}
-            >
-              {locale === 'en' ? node.nameEn : node.name}
-            </text>
-          </g>
-        )
-      })}
-
-      <g transform="translate(8, 8)">
-        <rect width="108" height="52" rx="4" fill="rgba(255,255,255,0.92)" stroke="#ddd" />
-        <text x="8" y="14" fontSize="7" fontWeight="600" fill="#333">{t('command.mapLegend.title')}</text>
-        <line x1="8" y1="22" x2="28" y2="22" stroke="#5aad4a" strokeWidth="2" strokeDasharray="4 3" />
-        <text x="32" y="25" fontSize="6.5" fill="#666">{t('command.mapLegend.rail')}</text>
-        <line x1="8" y1="34" x2="28" y2="34" stroke="#5aad4a" strokeWidth="2.5" />
-        <text x="32" y="37" fontSize="6.5" fill="#666">{t('command.mapLegend.sea')}</text>
-        <circle cx="14" cy="44" r="3" fill="#e74c3c" />
-        <text x="32" y="47" fontSize="6.5" fill="#666">{t('command.mapLegend.riskNode')}</text>
-      </g>
-    </svg>
+    <div className="cmd-leaflet-map-root">
+      <div ref={containerRef} className="cmd-leaflet-map" />
+      {!token && (
+        <div className="cmd-map-token-hint">
+          {t('command.mapTokenHint')}
+        </div>
+      )}
+      <div className="cmd-leaflet-legend">
+        <div className="cmd-leaflet-legend-title">{t('command.mapLegend.title')}</div>
+        <div className="cmd-leaflet-legend-row">
+          <span className="cmd-leaflet-legend-line freight" />
+          <span>{t('command.mapLegend.freight')}</span>
+        </div>
+        <div className="cmd-leaflet-legend-row">
+          <span className="cmd-leaflet-legend-line rail" />
+          <span>{t('command.mapLegend.rail')}</span>
+        </div>
+        <div className="cmd-leaflet-legend-row">
+          <span className="cmd-leaflet-legend-line sea" />
+          <span>{t('command.mapLegend.sea')}</span>
+        </div>
+        <div className="cmd-leaflet-legend-row">
+          <span className="cmd-leaflet-legend-dot risk" />
+          <span>{t('command.mapLegend.riskNode')}</span>
+        </div>
+      </div>
+    </div>
   )
 }
 

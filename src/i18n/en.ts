@@ -138,10 +138,12 @@ export const en: TranslationTree = {
     },
     mapLegend: {
       title: 'Legend',
+      freight: 'Freight rail (OSM)',
       rail: 'Rail',
       sea: 'Sea',
       riskNode: 'Risk Node',
     },
+    mapTokenHint: 'Tianditu key not set; using fallback basemap. Set VITE_TIANDITU_TK in .env',
     popup: {
       status: 'Status',
       congestion: 'Congestion',

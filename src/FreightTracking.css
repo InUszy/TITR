@@ -4031,12 +4031,174 @@
   position: relative;
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   overflow: hidden;
+}
+
+.cmd-leaflet-map-root {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cmd-leaflet-map {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  background: #1a2634;
+  z-index: 0;
+}
+
+.cmd-leaflet-map .leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.cmd-freight-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+.cmd-map-token-hint {
+  position: absolute;
+  left: 12px;
+  bottom: 36px;
+  z-index: 500;
+  max-width: 280px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(15, 25, 35, 0.88);
+  border: 1px solid rgba(245, 166, 35, 0.45);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.cmd-leaflet-legend {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 500;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #ddd;
+  font-size: 11px;
+  color: #444;
+  pointer-events: none;
+}
+
+.cmd-leaflet-legend-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.cmd-leaflet-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cmd-leaflet-legend-line {
+  width: 22px;
+  height: 0;
+  border-top: 2px solid #5aad4a;
+}
+
+.cmd-leaflet-legend-line.freight {
+  border-top-color: #b8860b;
+  border-top-style: solid;
+}
+
+.cmd-leaflet-legend-line.rail {
+  border-top-style: dashed;
+}
+
+.cmd-leaflet-legend-line.sea {
+  border-top-width: 3px;
+  border-top-style: solid;
+}
+
+.cmd-leaflet-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e74c3c;
+}
+
+.cmd-leaflet-marker {
+  background: transparent;
+  border: none;
+}
+
+.cmd-leaflet-marker-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cmd-leaflet-marker-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.cmd-leaflet-marker-wrap.selected .cmd-leaflet-marker-dot {
+  width: 12px;
+  height: 12px;
+}
+
+.cmd-leaflet-marker-ring {
+  position: absolute;
+  top: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #5aad4a;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.cmd-leaflet-marker-pulse {
+  position: absolute;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e74c3c;
+  opacity: 0.25;
+  animation: cmd-pulse-marker 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes cmd-pulse-marker {
+  0%, 100% { transform: scale(1); opacity: 0.25; }
+  50% { transform: scale(1.35); opacity: 0.08; }
+}
+
+.cmd-leaflet-marker-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #1f2d3d;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 1px 1px 0 #fff, -1px -1px 0 #fff;
+  white-space: nowrap;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cmd-map-svg {
@@ -4062,7 +4224,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
+  z-index: 600;
 }
 
 .cmd-map-popup {
