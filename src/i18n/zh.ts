@@ -361,9 +361,10 @@ export const zh: TranslationTree = {
   },
   mapTest: {
     title: '铁路线路地图测试',
-    subtitle: 'Leaflet + Canvas 货运铁路图层，叠加 TMTM 跨里海走廊重要站点与港口',
+    subtitle: 'Leaflet 地图：关键站点与铁路线按国家分组，随班列轨迹逐步展示',
     legend: {
       tmtmNode: 'TMTM 重要节点',
+      tmtmNodeByCountry: '已展示国家的关键节点',
       trajectoryDone: '已运行轨迹',
       trajectoryPlanned: '计划运行段',
     },
@@ -386,6 +387,10 @@ export const zh: TranslationTree = {
       currentBadge: '当前',
       passed: '途经站',
       passedCount: '历史途经站',
+      visibleCountries: '已展示国家',
+      prevStep: '上一步',
+      nextStep: '下一步',
+      stepProgress: '步骤 {current}/{total} · {station}',
       enLabelHint: '英文地名：优先使用天地图 eva 注记；若 Key 未开通，将自动使用 CARTO 英文标注层',
     },
   },

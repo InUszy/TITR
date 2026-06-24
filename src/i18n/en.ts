@@ -359,9 +359,10 @@ export const en: TranslationTree = {
   },
   mapTest: {
     title: 'Freight Rail Map Test',
-    subtitle: 'Leaflet + Canvas freight rail layer with TMTM corridor hubs and ports',
+    subtitle: 'Leaflet map: country-scoped hubs and rail lines revealed along the train trajectory',
     legend: {
       tmtmNode: 'TMTM key hub',
+      tmtmNodeByCountry: 'Key hubs in visible countries',
       trajectoryDone: 'Completed path',
       trajectoryPlanned: 'Planned path',
     },
@@ -384,6 +385,10 @@ export const en: TranslationTree = {
       currentBadge: 'NOW',
       passed: 'Passed',
       passedCount: 'Passed stations',
+      visibleCountries: 'Visible countries',
+      prevStep: 'Previous',
+      nextStep: 'Next',
+      stepProgress: 'Step {current}/{total} · {station}',
       enLabelHint: 'English labels: Tianditu eva layer first; CARTO English labels used if eva is unavailable for your key',
     },
   },

@@ -3,7 +3,14 @@ import { fetchTrainTrajectory, TrainTrajectoryError } from '../api/trainTrajecto
 import { listMockTrainNumbers } from '../api/mockTrainTrajectory'
 import { FreightLinesMap } from '../components/FreightLinesMap'
 import { useLanguage } from '../i18n/LanguageContext'
+import { getCorridorCountryLabel } from '../types/corridorCountries'
 import type { TrainTrajectory } from '../types/trainTrajectory'
+import {
+  clampTrajectoryStep,
+  getMaxTrajectoryStep,
+  getRevealedStationsAtStep,
+  getVisibleCountriesAtStep,
+} from '../utils/trajectoryVisibility'
 import '../FreightMapTest.css'
 
 const DEFAULT_TRAIN_NO = 'XL20260508001'
@@ -12,6 +19,7 @@ export function FreightMapTestPage() {
   const { t, locale, setLocale } = useLanguage()
   const [trainNo, setTrainNo] = useState(DEFAULT_TRAIN_NO)
   const [trajectory, setTrajectory] = useState<TrainTrajectory | null>(null)
+  const [trajectoryStep, setTrajectoryStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -20,6 +28,7 @@ export function FreightMapTestPage() {
     if (!normalized) {
       setError(t('mapTest.trajectory.trainNoRequired'))
       setTrajectory(null)
+      setTrajectoryStep(0)
       return
     }
 
@@ -28,8 +37,10 @@ export function FreightMapTestPage() {
     try {
       const data = await fetchTrainTrajectory(normalized)
       setTrajectory(data)
+      setTrajectoryStep(0)
     } catch (err) {
       setTrajectory(null)
+      setTrajectoryStep(0)
       if (err instanceof TrainTrajectoryError) {
         setError(err.message)
       } else {
@@ -50,6 +61,18 @@ export function FreightMapTestPage() {
   }
 
   const mockTrainNumbers = listMockTrainNumbers()
+  const maxStep = trajectory ? getMaxTrajectoryStep(trajectory) : 0
+  const clampedStep = trajectory ? clampTrajectoryStep(trajectory, trajectoryStep) : 0
+  const visibleCountries = trajectory ? getVisibleCountriesAtStep(trajectory, clampedStep) : []
+  const visibleCountryLabels = visibleCountries.map((c) => getCorridorCountryLabel(c, locale)).join('、')
+  const revealedStations = trajectory ? getRevealedStationsAtStep(trajectory, clampedStep) : []
+  const currentStepStation = revealedStations[revealedStations.length - 1]
+  const currentStepLabel = currentStepStation
+    ? (locale === 'en' ? currentStepStation.nameEn ?? currentStepStation.name : currentStepStation.name)
+    : ''
+
+  const goPrevStep = () => setTrajectoryStep((s) => Math.max(0, s - 1))
+  const goNextStep = () => setTrajectoryStep((s) => (trajectory ? Math.min(getMaxTrajectoryStep(trajectory), s + 1) : s))
 
   return (
     <div className="freight-map-test-page">
@@ -122,12 +145,46 @@ export function FreightMapTestPage() {
                 <span>{t('mapTest.trajectory.passedCount')}</span>
                 <strong>{trajectory.passedStations.length}</strong>
               </div>
+              <div>
+                <span>{t('mapTest.trajectory.visibleCountries')}</span>
+                <strong>{visibleCountryLabels}</strong>
+              </div>
+            </div>
+            <div className="freight-map-test-step-controls">
+              <span className="freight-map-test-step-label">
+                {t('mapTest.trajectory.stepProgress', {
+                  current: clampedStep + 1,
+                  total: maxStep + 1,
+                  station: currentStepLabel,
+                })}
+              </span>
+              <div className="freight-map-test-step-buttons">
+                <button type="button" onClick={goPrevStep} disabled={clampedStep <= 0}>
+                  {t('mapTest.trajectory.prevStep')}
+                </button>
+                <button type="button" onClick={goNextStep} disabled={clampedStep >= maxStep}>
+                  {t('mapTest.trajectory.nextStep')}
+                </button>
+              </div>
+              <input
+                type="range"
+                className="freight-map-test-step-slider"
+                min={0}
+                max={maxStep}
+                value={clampedStep}
+                onChange={(event) => setTrajectoryStep(Number(event.target.value))}
+              />
             </div>
           </div>
         )}
       </div>
 
-      <FreightLinesMap showLegend showTmtmOverlay trajectory={trajectory} />
+      <FreightLinesMap
+        showLegend
+        showTmtmOverlay
+        trajectory={trajectory}
+        trajectoryStep={clampedStep}
+      />
     </div>
   )
 }

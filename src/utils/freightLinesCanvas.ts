@@ -1,4 +1,5 @@
 import L from 'leaflet'
+import { RAILWAY_LINE_FILES, type CorridorCountryId } from '../types/corridorCountries'
 
 export interface FreightLineRecord {
   /** [minLat, minLng, maxLat, maxLng] */
@@ -11,7 +12,7 @@ export interface FreightLinesData {
   lines: FreightLineRecord[]
 }
 
-const FREIGHT_LINES_URL = '/geo/freight_lines.json'
+const RAILWAY_LINES_BASE = '/railwayLineJson'
 
 const STYLE = {
   color: '#b8860b',
@@ -25,6 +26,16 @@ type FreightLayerState = {
   canvas: HTMLCanvasElement | null
   ctx: CanvasRenderingContext2D | null
   redrawScheduled: boolean
+}
+
+export type FreightLinesLayer = L.Layer & {
+  setData: (data: FreightLinesData) => void
+}
+
+const railwayCache = new Map<CorridorCountryId, FreightLinesData>()
+
+function mergeFreightLines(datasets: FreightLinesData[]): FreightLinesData {
+  return { lines: datasets.flatMap((item) => item.lines) }
 }
 
 function resetCanvas(state: FreightLayerState) {
@@ -65,6 +76,8 @@ function redrawLines(state: FreightLayerState) {
   const east = bounds.getEast()
 
   ctx.clearRect(0, 0, size.x, size.y)
+  if (!data.lines.length) return
+
   ctx.strokeStyle = STYLE.color
   ctx.lineWidth = STYLE.weight
   ctx.globalAlpha = STYLE.opacity
@@ -87,7 +100,39 @@ function redrawLines(state: FreightLayerState) {
   ctx.stroke()
 }
 
-export function createFreightLinesLayer(data: FreightLinesData): L.Layer {
+async function loadCountryRailwayLines(country: CorridorCountryId): Promise<FreightLinesData | null> {
+  const cached = railwayCache.get(country)
+  if (cached) return cached
+
+  const fileName = RAILWAY_LINE_FILES[country]
+  if (!fileName) return null
+
+  try {
+    const res = await fetch(`${RAILWAY_LINES_BASE}/${fileName}`)
+    if (!res.ok) return null
+    const data = (await res.json()) as FreightLinesData
+    if (!data.lines?.length) return null
+    railwayCache.set(country, data)
+    return data
+  } catch {
+    return null
+  }
+}
+
+export async function loadRailwayLinesForCountries(
+  countries: CorridorCountryId[],
+): Promise<FreightLinesData> {
+  const datasets = await Promise.all(countries.map(loadCountryRailwayLines))
+  const valid = datasets.filter((item): item is FreightLinesData => item !== null)
+  return valid.length ? mergeFreightLines(valid) : { lines: [] }
+}
+
+export async function loadAllRailwayLines(): Promise<FreightLinesData> {
+  const countries = Object.keys(RAILWAY_LINE_FILES) as CorridorCountryId[]
+  return loadRailwayLinesForCountries(countries)
+}
+
+export function createFreightLinesLayer(data: FreightLinesData = { lines: [] }): FreightLinesLayer {
   const state: FreightLayerState = {
     data,
     map: null,
@@ -119,19 +164,12 @@ export function createFreightLinesLayer(data: FreightLinesData): L.Layer {
       state.canvas = null
       state.ctx = null
     },
+
+    setData(next: FreightLinesData) {
+      state.data = next
+      scheduleRedraw(state)
+    },
   })
 
-  return new LayerClass()
-}
-
-export async function loadFreightLinesData(): Promise<FreightLinesData | null> {
-  try {
-    const res = await fetch(FREIGHT_LINES_URL)
-    if (!res.ok) return null
-    const data = (await res.json()) as FreightLinesData
-    if (!data.lines?.length) return null
-    return data
-  } catch {
-    return null
-  }
+  return new LayerClass() as FreightLinesLayer
 }

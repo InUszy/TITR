@@ -1,14 +1,25 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useLanguage } from '../i18n/LanguageContext'
 import { addTiandituBaseLayers, swapTiandituAnnotationLayer, getTiandituToken } from '../utils/tianditu'
-import { createFreightLinesLayer, loadFreightLinesData } from '../utils/freightLinesCanvas'
+import {
+  createFreightLinesLayer,
+  loadRailwayLinesForCountries,
+  type FreightLinesLayer,
+} from '../utils/freightLinesCanvas'
 import {
   corridorNodes,
   nodeLatLng,
   type CorridorNode,
 } from '../types/commandDashboard'
+import { getCorridorCountryLabel } from '../types/corridorCountries'
+import {
+  getRevealedStationsAtStep,
+  getStationRoleAtStep,
+  getVisibleCountriesAtStep,
+  getMaxTrajectoryStep,
+} from '../utils/trajectoryVisibility'
 import type { TrainTrajectory, TrajectoryStation, TrajectoryStationRole } from '../types/trainTrajectory'
 
 const DEFAULT_CENTER: L.LatLngExpression = [44, 58]
@@ -21,6 +32,8 @@ interface FreightLinesMapProps {
   showLegend?: boolean
   showTmtmOverlay?: boolean
   trajectory?: TrainTrajectory | null
+  /** 分步展示索引；不传则展示完整当前轨迹 */
+  trajectoryStep?: number
 }
 
 function stationLatLng(station: TrajectoryStation): L.LatLngExpression {
@@ -37,15 +50,16 @@ function stationMatchKey(station: TrajectoryStation): string[] {
   return keys
 }
 
-function collectTrajectoryStationKeys(trajectory: TrainTrajectory): Set<string> {
+function collectRevealedStationKeys(
+  revealed: TrajectoryStation[],
+  arrival: TrajectoryStation,
+): Set<string> {
   const keys = new Set<string>()
   const add = (station: TrajectoryStation) => {
     stationMatchKey(station).forEach((key) => keys.add(key))
   }
-  add(trajectory.departure)
-  add(trajectory.arrival)
-  add(trajectory.current)
-  trajectory.passedStations.forEach(add)
+  revealed.forEach(add)
+  add(arrival)
   return keys
 }
 
@@ -126,17 +140,29 @@ export function FreightLinesMap({
   showLegend = false,
   showTmtmOverlay = false,
   trajectory = null,
+  trajectoryStep,
 }: FreightLinesMapProps) {
   const { t, locale } = useLanguage()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
-  const freightLayerRef = useRef<L.Layer | null>(null)
+  const freightLayerRef = useRef<FreightLinesLayer | null>(null)
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
   const trajectoryLayerRef = useRef<L.LayerGroup | null>(null)
   const annotationLayerRef = useRef<L.Layer | null>(null)
   const annotationLocaleRef = useRef<string | null>(null)
   const hasFitBoundsRef = useRef(false)
+  const trajectoryFitKeyRef = useRef<string | null>(null)
   const token = getTiandituToken()
+
+  const effectiveStep = trajectory && trajectoryStep !== undefined
+    ? Math.min(Math.max(0, trajectoryStep), getMaxTrajectoryStep(trajectory))
+    : (trajectory ? getMaxTrajectoryStep(trajectory) : 0)
+
+  const visibleCountries = useMemo(
+    () => (trajectory ? getVisibleCountriesAtStep(trajectory, effectiveStep) : []),
+    [trajectory, effectiveStep],
+  )
+  const visibleCountrySet = useMemo(() => new Set(visibleCountries), [visibleCountries])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -167,13 +193,9 @@ export function FreightLinesMap({
     }
     trajectoryLayerRef.current = L.layerGroup().addTo(map)
 
-    let cancelled = false
-    loadFreightLinesData().then((data) => {
-      if (cancelled || !data || !mapRef.current) return
-      const layer = createFreightLinesLayer(data)
-      layer.addTo(mapRef.current)
-      freightLayerRef.current = layer
-    })
+    const freightLayer = createFreightLinesLayer({ lines: [] })
+    freightLayer.addTo(map)
+    freightLayerRef.current = freightLayer
 
     const resizeObserver = new ResizeObserver(() => {
       map.invalidateSize()
@@ -181,7 +203,6 @@ export function FreightLinesMap({
     resizeObserver.observe(containerRef.current)
 
     return () => {
-      cancelled = true
       resizeObserver.disconnect()
       if (freightLayerRef.current) {
         freightLayerRef.current.remove()
@@ -194,6 +215,7 @@ export function FreightLinesMap({
       annotationLayerRef.current = null
       annotationLocaleRef.current = null
       hasFitBoundsRef.current = false
+      trajectoryFitKeyRef.current = null
     }
   }, [token, center, zoom, showTmtmOverlay])
 
@@ -211,15 +233,38 @@ export function FreightLinesMap({
   }, [locale, token])
 
   useEffect(() => {
+    const layer = freightLayerRef.current
+    if (!layer) return
+
+    let cancelled = false
+    if (!visibleCountries.length) {
+      layer.setData({ lines: [] })
+      return undefined
+    }
+
+    loadRailwayLinesForCountries(visibleCountries).then((data) => {
+      if (!cancelled) layer.setData(data)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [visibleCountries])
+
+  useEffect(() => {
     const map = mapRef.current
     const markersLayer = markersLayerRef.current
     if (!showTmtmOverlay || !map || !markersLayer) return
 
     markersLayer.clearLayers()
-    const trajectoryKeys = trajectory ? collectTrajectoryStationKeys(trajectory) : null
+    if (!trajectory) return
+
+    const revealed = getRevealedStationsAtStep(trajectory, effectiveStep)
+    const trajectoryKeys = collectRevealedStationKeys(revealed, trajectory.arrival)
 
     corridorNodes.forEach((node) => {
-      if (trajectoryKeys && isCorridorNodeOnTrajectory(node, trajectoryKeys)) return
+      if (!visibleCountrySet.has(node.country)) return
+      if (isCorridorNodeOnTrajectory(node, trajectoryKeys)) return
 
       const label = locale === 'en' ? node.nameEn : node.name
       const marker = L.marker(nodeLatLng(node), {
@@ -228,21 +273,21 @@ export function FreightLinesMap({
       marker.bindPopup(`
         <div class="tmtm-map-popup">
           <strong>${label}</strong>
-          <div>${t(`mapTest.nodeType.${node.type}`)} · ${t(`command.region.${node.region}`)}</div>
+          <div>${t(`mapTest.nodeType.${node.type}`)} · ${getCorridorCountryLabel(node.country, locale)}</div>
           <div>${node.remark}</div>
         </div>
       `)
       marker.addTo(markersLayer)
     })
 
-    if (!trajectory && !hasFitBoundsRef.current) {
+    if (!hasFitBoundsRef.current) {
       const bounds = L.latLngBounds(corridorNodes.map((node) => nodeLatLng(node)))
       if (bounds.isValid()) {
         map.fitBounds(bounds, { padding: [48, 48], maxZoom: 5 })
         hasFitBoundsRef.current = true
       }
     }
-  }, [showTmtmOverlay, locale, t, trajectory])
+  }, [showTmtmOverlay, locale, t, trajectory, visibleCountrySet, effectiveStep])
 
   useEffect(() => {
     const map = mapRef.current
@@ -252,11 +297,8 @@ export function FreightLinesMap({
     trajectoryLayer.clearLayers()
     if (!trajectory) return
 
-    const completedPath: L.LatLngExpression[] = [
-      stationLatLng(trajectory.departure),
-      ...trajectory.passedStations.map(stationLatLng),
-      stationLatLng(trajectory.current),
-    ]
+    const revealed = getRevealedStationsAtStep(trajectory, effectiveStep)
+    const completedPath = revealed.map(stationLatLng)
 
     if (completedPath.length >= 2) {
       L.polyline(completedPath, {
@@ -266,37 +308,33 @@ export function FreightLinesMap({
       }).addTo(trajectoryLayer)
     }
 
-    L.polyline([stationLatLng(trajectory.current), stationLatLng(trajectory.arrival)], {
-      color: '#2563eb',
-      weight: 2,
-      opacity: 0.55,
-      dashArray: '8 6',
-    }).addTo(trajectoryLayer)
+    const lastRevealed = revealed[revealed.length - 1]
+    if (lastRevealed) {
+      L.polyline([stationLatLng(lastRevealed), stationLatLng(trajectory.arrival)], {
+        color: '#2563eb',
+        weight: 2,
+        opacity: 0.55,
+        dashArray: '8 6',
+      }).addTo(trajectoryLayer)
+    }
 
-    addTrajectoryMarker(
-      trajectoryLayer,
-      trajectory.departure,
-      'departure',
-      locale,
-      t('mapTest.trajectory.departure'),
-    )
-    trajectory.passedStations.forEach((station) => {
+    revealed.forEach((station, index) => {
+      const role = getStationRoleAtStep(trajectory, effectiveStep, index)
+      const popupTitle = role === 'departure'
+        ? t('mapTest.trajectory.departure')
+        : role === 'current'
+          ? t('mapTest.trajectory.current')
+          : t('mapTest.trajectory.passed')
       addTrajectoryMarker(
         trajectoryLayer,
         station,
-        'passed',
+        role,
         locale,
-        t('mapTest.trajectory.passed'),
+        popupTitle,
+        role === 'current' ? t('mapTest.trajectory.currentBadge') : undefined,
       )
     })
-    addTrajectoryMarker(
-      trajectoryLayer,
-      trajectory.current,
-      'current',
-      locale,
-      t('mapTest.trajectory.current'),
-      t('mapTest.trajectory.currentBadge'),
-    )
+
     addTrajectoryMarker(
       trajectoryLayer,
       trajectory.arrival,
@@ -305,17 +343,20 @@ export function FreightLinesMap({
       t('mapTest.trajectory.arrival'),
     )
 
-    const allPoints = [
-      trajectory.departure,
-      ...trajectory.passedStations,
-      trajectory.current,
-      trajectory.arrival,
-    ].map(stationLatLng)
-    const bounds = L.latLngBounds(allPoints)
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [56, 56], maxZoom: 6 })
+    if (trajectoryFitKeyRef.current !== trajectory.trainNo) {
+      trajectoryFitKeyRef.current = trajectory.trainNo
+      const allPoints = [
+        trajectory.departure,
+        ...trajectory.passedStations,
+        trajectory.current,
+        trajectory.arrival,
+      ].map(stationLatLng)
+      const bounds = L.latLngBounds(allPoints)
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [56, 56], maxZoom: 6 })
+      }
     }
-  }, [trajectory, locale, t])
+  }, [trajectory, effectiveStep, locale, t])
 
   return (
     <div className={`freight-lines-map-root ${className}`.trim()}>
@@ -332,10 +373,10 @@ export function FreightLinesMap({
             <span className="freight-lines-map-legend-line freight" />
             <span>{t('command.mapLegend.freight')}</span>
           </div>
-          {showTmtmOverlay && (
+          {showTmtmOverlay && trajectory && (
             <div className="freight-lines-map-legend-row">
               <span className="freight-lines-map-legend-dot" />
-              <span>{t('mapTest.legend.tmtmNode')}</span>
+              <span>{t('mapTest.legend.tmtmNodeByCountry')}</span>
             </div>
           )}
           {trajectory && (

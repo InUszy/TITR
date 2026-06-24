@@ -10,6 +10,7 @@ function nodeToStation(nodeId: string, arrivedAt?: string): TrajectoryStation | 
     nameEn: node.nameEn,
     lat: node.lat,
     lng: node.lng,
+    country: node.country,
     arrivedAt,
   }
 }

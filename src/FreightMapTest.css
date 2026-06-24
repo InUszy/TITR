@@ -130,6 +130,42 @@
   color: #e8edf2;
 }
 
+.freight-map-test-step-controls {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.freight-map-test-step-label {
+  font-size: 12px;
+  color: rgba(232, 237, 242, 0.85);
+}
+
+.freight-map-test-step-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.freight-map-test-step-buttons button {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  cursor: pointer;
+}
+
+.freight-map-test-step-buttons button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.freight-map-test-step-slider {
+  width: min(320px, 100%);
+  accent-color: #5aad4a;
+}
+
 .freight-lines-map-root {
   position: relative;
   flex: 1;

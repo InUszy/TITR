@@ -1,9 +1,12 @@
+import type { CorridorCountryId } from './corridorCountries'
+
 export interface TrajectoryStation {
   id?: string
   name: string
   nameEn?: string
   lat: number
   lng: number
+  country?: CorridorCountryId
   arrivedAt?: string
 }
 

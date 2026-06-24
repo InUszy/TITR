@@ -12,7 +12,7 @@ import {
 } from '../types/commandDashboard'
 import { useLanguage } from '../i18n/LanguageContext'
 import { addTiandituBaseLayers, swapTiandituAnnotationLayer, getTiandituToken } from '../utils/tianditu'
-import { createFreightLinesLayer, loadFreightLinesData } from '../utils/freightLinesCanvas'
+import { createFreightLinesLayer, loadAllRailwayLines } from '../utils/freightLinesCanvas'
 
 const STATUS_COLORS: Record<NodeStatus, string> = {
   normal: '#5aad4a',
@@ -152,7 +152,7 @@ export function CommandCorridorMap({
     mapRef.current = map
 
     let cancelled = false
-    loadFreightLinesData().then((data) => {
+    loadAllRailwayLines().then((data) => {
       if (cancelled || !data || !mapRef.current) return
       const layer = createFreightLinesLayer(data)
       layer.addTo(mapRef.current)
