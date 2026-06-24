@@ -1,15 +1,16 @@
 /**
- * Preprocess OSM freight GeoJSON into a compact line dataset for canvas rendering.
- * Keeps LineString only, simplifies geometry, strips properties.
+ * Preprocess GeoJSON line features into compact datasets for canvas rendering.
+ * Reads every *.geojson under public/geojson/, writes one JSON per file to public/railwayLineJson/.
+ * Keeps LineString / MultiLineString only, simplifies geometry, strips properties.
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { dirname, join, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
-const sourcePath = join(root, 'public/geo/all_freight_wgs84.geojson')
-const outputPath = join(root, 'public/geo/freight_lines.json')
+const sourceDir = join(root, 'public/geojson')
+const outputDir = join(root, 'public/railwayLineJson')
 
 const SIMPLIFY_TOLERANCE = 0.005
 
@@ -57,50 +58,97 @@ function simplify(coords, tolerance) {
   return [coords[0], coords[end]]
 }
 
-function build() {
-  if (!existsSync(sourcePath)) {
-    console.warn(`[build-freight-lines] Source not found: ${sourcePath}`)
-    return
+function coordsToLineRecord(coords) {
+  const simplified = simplify(coords, SIMPLIFY_TOLERANCE)
+  if (simplified.length < 2) return null
+
+  let minLng = Infinity
+  let maxLng = -Infinity
+  let minLat = Infinity
+  let maxLat = -Infinity
+
+  const normalized = simplified.map(([lng, lat]) => {
+    minLng = Math.min(minLng, lng)
+    maxLng = Math.max(maxLng, lng)
+    minLat = Math.min(minLat, lat)
+    maxLat = Math.max(maxLat, lat)
+    return [+lat.toFixed(4), +lng.toFixed(4)]
+  })
+
+  return {
+    b: [
+      +minLat.toFixed(2),
+      +minLng.toFixed(2),
+      +maxLat.toFixed(2),
+      +maxLng.toFixed(2),
+    ],
+    c: normalized,
+  }
+}
+
+function extractLineStrings(geometry) {
+  if (!geometry) return []
+
+  if (geometry.type === 'LineString') {
+    return [geometry.coordinates]
   }
 
-  const data = JSON.parse(readFileSync(sourcePath, 'utf8'))
+  if (geometry.type === 'MultiLineString') {
+    return geometry.coordinates
+  }
+
+  return []
+}
+
+function convertGeoJson(data) {
   const lines = []
 
   for (const feature of data.features ?? []) {
-    if (feature.geometry?.type !== 'LineString') continue
-
-    const simplified = simplify(feature.geometry.coordinates, SIMPLIFY_TOLERANCE)
-    if (simplified.length < 2) continue
-
-    let minLng = Infinity
-    let maxLng = -Infinity
-    let minLat = Infinity
-    let maxLat = -Infinity
-
-    const coords = simplified.map(([lng, lat]) => {
-      minLng = Math.min(minLng, lng)
-      maxLng = Math.max(maxLng, lng)
-      minLat = Math.min(minLat, lat)
-      maxLat = Math.max(maxLat, lat)
-      return [+lat.toFixed(4), +lng.toFixed(4)]
-    })
-
-    lines.push({
-      b: [
-        +minLat.toFixed(2),
-        +minLng.toFixed(2),
-        +maxLat.toFixed(2),
-        +maxLng.toFixed(2),
-      ],
-      c: coords,
-    })
+    for (const coords of extractLineStrings(feature.geometry)) {
+      const line = coordsToLineRecord(coords)
+      if (line) lines.push(line)
+    }
   }
 
-  const output = { lines }
+  return { lines }
+}
+
+function convertFile(sourcePath, outputPath) {
+  const data = JSON.parse(readFileSync(sourcePath, 'utf8'))
+  const output = convertGeoJson(data)
   writeFileSync(outputPath, JSON.stringify(output))
 
   const sizeMb = (Buffer.byteLength(JSON.stringify(output), 'utf8') / 1024 / 1024).toFixed(2)
-  console.log(`[build-freight-lines] Wrote ${lines.length} lines (${sizeMb} MB) -> ${outputPath}`)
+  return { lineCount: output.lines.length, sizeMb }
+}
+
+function build() {
+  if (!existsSync(sourceDir)) {
+    console.warn(`[build-freight-lines] Source directory not found: ${sourceDir}`)
+    return
+  }
+
+  mkdirSync(outputDir, { recursive: true })
+
+  const geojsonFiles = readdirSync(sourceDir)
+    .filter((name) => name.toLowerCase().endsWith('.geojson'))
+    .sort()
+
+  if (geojsonFiles.length === 0) {
+    console.warn(`[build-freight-lines] No .geojson files in ${sourceDir}`)
+    return
+  }
+
+  for (const fileName of geojsonFiles) {
+    const sourcePath = join(sourceDir, fileName)
+    const outputName = `${basename(fileName, '.geojson')}.json`
+    const outputPath = join(outputDir, outputName)
+
+    const { lineCount, sizeMb } = convertFile(sourcePath, outputPath)
+    console.log(`[build-freight-lines] ${fileName} -> ${outputName} (${lineCount} lines, ${sizeMb} MB)`)
+  }
+
+  console.log(`[build-freight-lines] Done. ${geojsonFiles.length} file(s) -> ${outputDir}`)
 }
 
 build()
