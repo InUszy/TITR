@@ -11,9 +11,9 @@ export type CorridorCountryId =
 
 /** 各国铁路线 JSON（相对 public/railwayLineJson/） */
 export const RAILWAY_LINE_FILES: Partial<Record<CorridorCountryId, string>> = {
-  kazakhstan: 'kazakhstan-260615_railways.json',
-  azerbaijan: 'azerbaijan-260623_railways.json',
-  georgia: 'georgia-260623_railways.json',
+  kazakhstan: '13ee60a9-fda1-4ad6-b263-60105e1a168f-kazakhstan-260615_railways.json',
+  azerbaijan: 'db667121-4739-4ff3-b513-aa897338ee91-azerbaijan-260623_railways.json',
+  georgia: '502fd158-592b-424d-a697-6dded5910bfb-georgia-260623_railways.json',
 }
 
 export const CORRIDOR_COUNTRY_LABELS: Record<CorridorCountryId, { zh: string; en: string }> = {
